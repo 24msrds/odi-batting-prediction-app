@@ -17,9 +17,12 @@ MODEL_ACC = trained["model_accuracy"]
 MODEL_NAME = trained["model_name"]
 
 # basic lists
-OPPONENTS = sorted(DF_FULL["Opposition"].unique())
-GROUNDS = sorted(DF_FULL["Ground"].unique())
-DEFAULT_GROUND = DF_FULL["Ground"].mode()[0]
+# Filter out missing/unknown values
+OPPONENTS = sorted([x for x in DF_FULL["Opposition"].unique() if pd.notna(x) and x != "Unknown"])
+GROUNDS = sorted([x for x in DF_FULL["Ground"].unique() if pd.notna(x) and x != "Unknown"])
+
+DEFAULT_GROUND = GROUNDS[0] if GROUNDS else "Neutral Venue"
+
 
 # -----------------------------
 # Streamlit page config
