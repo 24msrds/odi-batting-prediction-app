@@ -4,22 +4,29 @@ import matplotlib.pyplot as plt
 
 import project_model  # our ML backend
 
+
 # -----------------------------
 # Load trained objects
-# 
-PLAYER_NATIONALITY = trained["player_nationality"]
+# -----------------------------
 trained = project_model.get_trained_objects()
 
 MODEL = trained["best_model"]
 X_COLS = trained["x_columns"]
 LE = trained["label_encoder"]
 DF_FULL = trained["df_full"]
+PLAYER_ROLES = trained["player_roles"]
+PLAYER_NATIONALITY = trained["player_nationality"]
 MODEL_ACC = trained["model_accuracy"]
 MODEL_NAME = trained["model_name"]
 
-# basic lists
-# Filter out missing/unknown values
-OPPONENTS = sorted(set(PLAYER_NATIONALITY.values()))  # ['AUS','ENG','IND',...]
+# -----------------------------
+# Clean dropdown values
+# -----------------------------
+
+# Oppositions: use team codes from PLAYER_NATIONALITY (IND, AUS, ENG, etc.)
+OPPONENTS = sorted(set(PLAYER_NATIONALITY.values()))
+
+# Grounds: use a static list of popular venues
 GROUNDS = [
     "Delhi", "Mumbai", "Chennai", "Kolkata", "Ahmedabad",
     "Melbourne", "Sydney", "Adelaide", "Perth",
@@ -46,20 +53,17 @@ st.set_page_config(
 st.sidebar.title("⚙ Match Settings")
 
 target_opp = st.sidebar.selectbox(
-    "Select Opposition",
+    "Select Opposition (Team)",
     options=OPPONENTS,
     index=0,
 )
 
 ground_choice = st.sidebar.selectbox(
     "Select Ground",
-    options=["Use default (most common)"] + GROUNDS,
+    options=[DEFAULT_GROUND] + GROUNDS,
 )
 
-if ground_choice == "Use default (most common)":
-    target_ground = DEFAULT_GROUND
-else:
-    target_ground = ground_choice
+target_ground = ground_choice
 
 top_n = st.sidebar.slider(
     "Number of top players to display",
@@ -89,8 +93,8 @@ ranked_df = project_model.analyze_and_rank_players(
     MODEL,
     X_COLS,
     LE,
-    target_opp,
-    target_ground,
+    target_opp,      # e.g. 'IND'
+    target_ground,   # e.g. 'Delhi'
 )
 
 if ranked_df.empty:
@@ -117,7 +121,6 @@ else:
     ax.set_ylabel("Player")
     ax.set_title(f"Average Runs vs {target_opp} at {target_ground}")
 
-    # Add labels on bars
     for i, v in enumerate(chart_df["Avg Runs"]):
         ax.text(v, i, f"{v:.1f}", va="center")
 
