@@ -42,7 +42,6 @@ st.markdown(
         color: #e5f4ff;
     }
 
-    section[data-testid="stSidebar"] .css-1d391kg,
     section[data-testid="stSidebar"] label,
     section[data-testid="stSidebar"] span {
         color: #e0f2fe !important;
@@ -77,7 +76,7 @@ st.markdown(
         color: #e5e7eb;
     }
 
-    /* -------- CHIP BADGES (Opposition, Venue, Top N) -------- */
+    /* -------- CHIP BADGES -------- */
     .chip {
         display: inline-flex;
         align-items: center;
@@ -130,39 +129,7 @@ st.markdown(
         box-shadow: 0 6px 18px rgba(15, 23, 42, 0.8);
     }
 
-    /* -------- TABS STYLING -------- */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 0.5rem;
-    }
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 999px;
-        padding: 0.55rem 1.1rem;
-        background: rgba(30, 64, 175, 0.55);
-        color: #e5e7eb;
-        font-weight: 500;
-        border: 1px solid transparent;
-        transition: 0.2s ease;
-    }
-    .stTabs [data-baseweb="tab"]:hover {
-        background: linear-gradient(120deg, #3b82f6, #1d4ed8);
-        color: white;
-    }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: linear-gradient(120deg, #1d4ed8, #0ea5e9);
-        color: white;
-        border-color: rgba(191, 219, 254, 0.9);
-        font-weight: 650;
-        box-shadow: 0 8px 22px rgba(37, 99, 235, 0.7);
-    }
-
-    /* -------- DATAFRAME TABLE -------- */
-    .dataframe {
-        border-radius: 0.75rem;
-        overflow: hidden;
-        background: #020617;
-    }
-
-    /* -------- EXPANDER STYLING -------- */
+    /* -------- EXPANDERS -------- */
     .streamlit-expanderHeader {
         background: #0b1220 !important;
         color: #e5e7eb !important;
@@ -184,19 +151,16 @@ MODEL = trained["best_model"]
 X_COLS = trained["x_columns"]
 LE = trained["label_encoder"]
 DF_FULL = trained["df_full"]
-PLAYER_ROLES = trained["player_roles"]
 PLAYER_NATIONALITY = trained["player_nationality"]
+PLAYER_ROLES = trained["player_roles"]
 MODEL_ACC = trained["model_accuracy"]
 MODEL_NAME = trained["model_name"]
 
 # -----------------------------
-# Clean dropdown values
+# Dropdown Data
 # -----------------------------
-
-# Oppositions: use team codes from PLAYER_NATIONALITY (IND, AUS, ENG, etc.)
 OPPONENTS = sorted(set(PLAYER_NATIONALITY.values()))
 
-# Grounds: use a static list of popular venues
 GROUNDS = [
     "Delhi", "Mumbai", "Chennai", "Kolkata", "Ahmedabad",
     "Melbourne", "Sydney", "Adelaide", "Perth",
@@ -207,179 +171,134 @@ GROUNDS = [
 ]
 DEFAULT_GROUND = "Neutral Venue"
 
-# ---- Map metadata: lat/lon, team, country ----
 VENUE_META = {
-    "Delhi":       {"lat": 28.6139,  "lon": 77.2090,  "team": "IND", "country": "India"},
-    "Mumbai":      {"lat": 19.0760,  "lon": 72.8777,  "team": "IND", "country": "India"},
-    "Chennai":     {"lat": 13.0827,  "lon": 80.2707,  "team": "IND", "country": "India"},
-    "Kolkata":     {"lat": 22.5726,  "lon": 88.3639,  "team": "IND", "country": "India"},
-    "Ahmedabad":   {"lat": 23.0225,  "lon": 72.5714,  "team": "IND", "country": "India"},
+    "Delhi": {"lat": 28.6139, "lon": 77.2090, "team": "IND","country": "India"},
+    "Mumbai":{"lat": 19.0760, "lon": 72.8777, "team": "IND","country": "India"},
+    "Chennai":{"lat": 13.0827, "lon": 80.2707, "team": "IND","country": "India"},
+    "Kolkata":{"lat": 22.5726, "lon": 88.3639, "team": "IND","country": "India"},
+    "Ahmedabad":{"lat":23.0225,"lon":72.5714,"team":"IND","country":"India"},
 
-    "Melbourne":   {"lat": -37.8136, "lon": 144.9631, "team": "AUS", "country": "Australia"},
-    "Sydney":      {"lat": -33.8688, "lon": 151.2093, "team": "AUS", "country": "Australia"},
-    "Adelaide":    {"lat": -34.9285, "lon": 138.6007, "team": "AUS", "country": "Australia"},
-    "Perth":       {"lat": -31.9505, "lon": 115.8605, "team": "AUS", "country": "Australia"},
+    "Melbourne":{"lat":-37.8136,"lon":144.9631,"team":"AUS","country":"Australia"},
+    "Sydney":{"lat":-33.8688,"lon":151.2093,"team":"AUS","country":"Australia"},
+    "Adelaide":{"lat":-34.9285,"lon":138.6007,"team":"AUS","country":"Australia"},
+    "Perth":{"lat":-31.9505,"lon":115.8605,"team":"AUS","country":"Australia"},
 
-    "Lords":       {"lat": 51.5299,  "lon": -0.1722,  "team": "ENG", "country": "England"},
-    "The Oval":    {"lat": 51.4837,  "lon": -0.1147,  "team": "ENG", "country": "England"},
-    "Birmingham":  {"lat": 52.4862,  "lon": -1.8904,  "team": "ENG", "country": "England"},
+    "Lords":{"lat":51.5299,"lon":-0.1722,"team":"ENG","country":"England"},
+    "The Oval":{"lat":51.4837,"lon":-0.1147,"team":"ENG","country":"England"},
+    "Birmingham":{"lat":52.4862,"lon":-1.8904,"team":"ENG","country":"England"},
 
-    "Abu Dhabi":   {"lat": 24.4539,  "lon": 54.3773,  "team": "UAE", "country": "UAE"},
-    "Dubai":       {"lat": 25.2048,  "lon": 55.2708,  "team": "UAE", "country": "UAE"},
-    "Sharjah":     {"lat": 25.3463,  "lon": 55.4209,  "team": "UAE", "country": "UAE"},
+    "Abu Dhabi":{"lat":24.4539,"lon":54.3773,"team":"UAE","country":"UAE"},
+    "Dubai":{"lat":25.2048,"lon":55.2708,"team":"UAE","country":"UAE"},
+    "Sharjah":{"lat":25.3463,"lon":55.4209,"team":"UAE","country":"UAE"},
 
-    "Johannesburg": {"lat": -26.2041, "lon": 28.0473,   "team": "SA", "country": "South Africa"},
-    "Cape Town":    {"lat": -33.9249, "lon": 18.4241,   "team": "SA", "country": "South Africa"},
-    "Durban":       {"lat": -29.8587, "lon": 31.0218,   "team": "SA", "country": "South Africa"},
+    "Johannesburg":{"lat":-26.2041,"lon":28.0473,"team":"SA","country":"South Africa"},
+    "Cape Town":{"lat":-33.9249,"lon":18.4241,"team":"SA","country":"South Africa"},
+    "Durban":{"lat":-29.8587,"lon":31.0218,"team":"SA","country":"South Africa"},
 
-    "Wellington":  {"lat": -41.2865, "lon": 174.7762, "team": "NZ", "country": "New Zealand"},
-    "Auckland":    {"lat": -36.8485, "lon": 174.7633, "team": "NZ", "country": "New Zealand"},
-    "Christchurch":{"lat": -43.5321, "lon": 172.6362, "team": "NZ", "country": "New Zealand"},
+    "Wellington":{"lat":-41.2865,"lon":174.7762,"team":"NZ","country":"New Zealand"},
+    "Auckland":{"lat":-36.8485,"lon":174.7633,"team":"NZ","country":"New Zealand"},
+    "Christchurch":{"lat":-43.5321,"lon":172.6362,"team":"NZ","country":"New Zealand"},
 }
 
-def venue_color(team: str):
-    """Neon-ish RGBA colors per team."""
+def venue_color(team):
     mapping = {
-        "IND": [37, 99, 235, 220],     # royal blue
-        "AUS": [234, 179, 8, 220],     # yellow
-        "ENG": [248, 113, 113, 220],   # red
-        "UAE": [45, 212, 191, 220],    # teal
-        "SA":  [74, 222, 128, 220],    # green
-        "NZ":  [129, 140, 248, 220],   # indigo
+        "IND":[37,99,235,220],"AUS":[234,179,8,220],
+        "ENG":[248,113,113,220],"UAE":[45,212,191,220],
+        "SA":[74,222,128,220],"NZ":[129,140,248,220],
     }
-    return mapping.get(team, [56, 189, 248, 220])  # default cyan
+    return mapping.get(team, [56,189,248,220])
 
 def build_venue_df():
-    rows = []
-    for venue in GROUNDS:
-        if venue == "Neutral Venue":
-            continue
-        meta = VENUE_META.get(venue)
-        if not meta:
-            continue
-        rows.append(
-            {
-                "venue": venue,
+    rows=[]
+    for v in GROUNDS:
+        meta = VENUE_META.get(v)
+        if meta:
+            rows.append({
+                "venue": v,
                 "lat": meta["lat"],
                 "lon": meta["lon"],
                 "team": meta["team"],
                 "country": meta["country"],
                 "color": venue_color(meta["team"]),
-                "icon_name": "stadium",
-            }
-        )
+            })
     return pd.DataFrame(rows)
 
 # -----------------------------
-# Sidebar controls
+# Sidebar
 # -----------------------------
 st.sidebar.title("⚙ Match Settings")
+target_opp = st.sidebar.selectbox("Select Opposition", OPPONENTS)
+ground_choice = st.sidebar.selectbox("Select Ground", [DEFAULT_GROUND] + GROUNDS)
 
-target_opp = st.sidebar.selectbox(
-    "Select Opposition (Team)",
-    options=OPPONENTS,
-    index=0,
+# dynamically limit top_n based on available players vs this opp
+available_batters = sum(
+    1 for p, r in PLAYER_ROLES.items()
+    if r in ["Batsman", "Wicketkeeper/Batsman", "All-rounder"]
+    and project_model.PLAYER_NATIONALITY.get(p, "Unknown") != target_opp
 )
+available_bowlers = sum(
+    1 for p, r in PLAYER_ROLES.items()
+    if r in ["Bowler", "All-rounder"]
+    and project_model.PLAYER_NATIONALITY.get(p, "Unknown") != target_opp
+    and p in project_model.PLAYER_BOWLING_PROFILE
+)
+max_players = max(available_batters, available_bowlers, 5)
 
-ground_choice = st.sidebar.selectbox(
-    "Select Ground",
-    options=[DEFAULT_GROUND] + GROUNDS,
-)
+top_n = st.sidebar.slider("Top Players to Display", 1, max_players, min(10, max_players))
 
 target_ground = ground_choice
 
-top_n = st.sidebar.slider(
-    "Number of top players to display",
-    min_value=5,
-    max_value=25,
-    value=10,
-    step=1,
-)
-
 # -----------------------------
-# Main header + KPI Cards
+# Header + KPIs
 # -----------------------------
 st.title("🏏 ODI Performance Studio")
-
 st.markdown(
     f"""
     <div>
-        <span class="chip">
-            <span class="chip-label">Opposition</span>
-            <span>{target_opp}</span>
-        </span>
-        <span class="chip">
-            <span class="chip-label">Venue</span>
-            <span>{target_ground}</span>
-        </span>
-        <span class="chip">
-            <span class="chip-label">Top N</span>
-            <span>{top_n} players</span>
-        </span>
+        <span class="chip"><span class="chip-label">Opposition</span>{target_opp}</span>
+        <span class="chip"><span class="chip-label">Venue</span>{target_ground}</span>
+        <span class="chip"><span class="chip-label">Top N</span>{top_n}</span>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-st.markdown("")
-
 col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.markdown(
-        f"""
-        <div class="metric-card">
+col1.markdown(
+    f"""<div class="metric-card">
             <div class="metric-label">ML Model</div>
             <div class="metric-value">{MODEL_NAME}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-with col2:
-    st.markdown(
-        f"""
-        <div class="metric-card">
+        </div>""",
+    unsafe_allow_html=True,
+)
+col2.markdown(
+    f"""<div class="metric-card">
             <div class="metric-label">Validation Accuracy</div>
             <div class="metric-value">{MODEL_ACC:.2%}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-with col3:
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <div class="metric-label">Unique Players Analysed</div>
+        </div>""",
+    unsafe_allow_html=True,
+)
+col3.markdown(
+    f"""<div class="metric-card">
+            <div class="metric-label">Unique Players</div>
             <div class="metric-value">{len(DF_FULL['Player'].unique())}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        </div>""",
+    unsafe_allow_html=True,
+)
 
 st.markdown("---")
 
 # -----------------------------
-# Run model analysis
+# Model Output
 # -----------------------------
-ranked_df = project_model.analyze_and_rank_players(
-    MODEL,
-    X_COLS,
-    LE,
-    target_opp,
-    target_ground,
-)
+ranked_df = project_model.analyze_and_rank_players(MODEL, X_COLS, LE, target_opp, target_ground)
 
-# Pre-compute bowling DF if available
 bowling_df = None
 if hasattr(project_model, "get_bowling_impact_df"):
     bowling_df = project_model.get_bowling_impact_df(target_opp)
 
-# Tabs for Batting / Bowling / Map
-bat_tab, bowl_tab, map_tab = st.tabs(
-    ["🏏 Batting Analysis", "🎯 Bowling Analysis", "🗺 Venue Map"]
-)
+# Tabs
+bat_tab, bowl_tab, map_tab = st.tabs(["🏏 Batting Analysis", "🎯 Bowling Analysis", "🗺 Venue Map"])
 
 # -------------------------------------------------
 # BAT TAB
@@ -388,199 +307,140 @@ with bat_tab:
     st.markdown('<div class="section-heading">📋 Ranked Player Performance</div>', unsafe_allow_html=True)
 
     if ranked_df.empty:
-        st.warning("No player performance data available for this selection.")
+        st.warning("No player data.")
     else:
-        st.dataframe(
-            ranked_df.head(top_n),
-            use_container_width=True,
-        )
+        st.dataframe(ranked_df.head(top_n), use_container_width=True)
 
+        # Chart
         st.markdown('<div class="section-heading">📊 Average Runs (Top Players)</div>', unsafe_allow_html=True)
-
-        chart_df = ranked_df.head(top_n).sort_values("Avg Runs", ascending=True)
-
-        # ---------- PREMIUM THEME BAR CHART (BATTING) ----------
-        fig, ax = plt.subplots(figsize=(11, max(4, len(chart_df) * 0.6)))
-
+        chart_df = ranked_df.head(top_n).sort_values("Avg Runs")
+        fig, ax = plt.subplots(figsize=(11, max(4, len(chart_df)*0.6)))
         fig.patch.set_facecolor("#0b1220")
         ax.set_facecolor("#020617")
+        for s in ax.spines.values():
+            s.set_visible(False)
 
-        # Remove spines
-        for spine in ax.spines.values():
-            spine.set_visible(False)
-
-        # Gradient blue bars
-        colors = np.linspace(0.3, 0.85, len(chart_df))
+        colors = np.linspace(0.3,0.85,len(chart_df))
         bars = ax.barh(
             chart_df["Player"],
             chart_df["Avg Runs"],
-            height=0.55,
             color=[plt.cm.Blues(c) for c in colors],
+            height=0.55,
             edgecolor="#0f172a",
-            linewidth=1.2,
         )
 
-        # Grid
-        ax.grid(axis="x", linestyle="--", alpha=0.35, color="#475569")
-        ax.set_axisbelow(True)
+        ax.grid(axis="x", linestyle="--", alpha=0.35)
+        ax.set_title(f"Avg Runs vs {target_opp}", color="#e2e8f0", fontsize=18)
+        ax.tick_params(colors="#e2e8f0")
+        ax.set_xlabel("Average Runs", color="#e2e8f0")
 
-        # Titles & labels
-        ax.set_title(
-            f"Average Runs vs {target_opp} at {target_ground}",
-            fontsize=18,
-            fontweight="bold",
-            color="#e2e8f0",
-            pad=15,
-        )
-        ax.set_xlabel("Average Runs", fontsize=13, color="#cbd5e1")
-        ax.set_ylabel("Player", fontsize=13, color="#cbd5e1")
-        ax.tick_params(colors="#e2e8f0", labelsize=12)
-
-        # Values at end of bars
-        for i, (bar, val) in enumerate(zip(bars, chart_df["Avg Runs"])):
-            ax.text(
-                val + 1,
-                i,
-                f"{val:.1f}",
-                va="center",
-                fontsize=12,
-                color="#e5e7eb",
-                fontweight="bold",
-            )
+        for i,(b,v) in enumerate(zip(bars, chart_df["Avg Runs"])):
+            ax.text(v+1, i, f"{v:.1f}", va="center", color="#e5e7eb", fontweight="bold")
 
         st.pyplot(fig)
 
-        # Actionable tips
-        st.markdown('<div class="section-heading">🧠 Actionable Batting Insights</div>', unsafe_allow_html=True)
+        # Insights
+        st.markdown('<div class="section-heading">🧠 Batting Insights</div>', unsafe_allow_html=True)
+        cat_map = {"Excellent":"badge-excellent","Good":"badge-good","Moderate":"badge-moderate","Low":"badge-low"}
 
-        category_colors = {
-            "Excellent": "badge-excellent",
-            "Good": "badge-good",
-            "Moderate": "badge-moderate",
-            "Low": "badge-low",
-        }
-
-        for idx, row in ranked_df.head(top_n).iterrows():
-            cat = str(row["Predicted Category"])
-            base_cat = "Low"
-            if "Excellent" in cat:
-                base_cat = "Excellent"
-            elif "Good" in cat:
-                base_cat = "Good"
-            elif "Moderate" in cat:
-                base_cat = "Moderate"
-
-            badge_class = category_colors.get(base_cat, "badge-low")
-
-            header_html = (
-                f"<span><b>{int(idx)}. {row['Player']}</b></span> "
-                f"&nbsp;&nbsp;<span class='badge {badge_class}'>{cat}</span>"
-            )
-
-            with st.expander("", expanded=False):
-                st.markdown(header_html, unsafe_allow_html=True)
+        for _, row in ranked_df.head(top_n).iterrows():
+            cat = row["Predicted Category"]
+            badge = cat_map.get(cat, "badge-low")
+            header = f"<b>{row['Player']}</b> <span class='badge {badge}'>{cat}</span>"
+            with st.expander(row['Player']):
+                st.markdown(header, unsafe_allow_html=True)
                 st.write(f"**Role:** {row['Role']}")
-                st.write(f"**Avg Runs:** {row['Avg Runs']}")
+                st.write(f"**Avg Runs (overall):** {row['Avg Runs']}")
                 col_name = f"Actual Runs vs {target_opp}"
                 if col_name in row:
-                    st.write(f"**Actual vs {target_opp}:** {row[col_name]}")
+                    st.write(f"**Total Runs vs {target_opp}:** {row[col_name]}")
                 st.write(f"**Insight:** {row['Actionable Tip']}")
 
 # -------------------------------------------------
-# BOWLING TAB
+# BOWLING TAB  (UPDATED)
 # -------------------------------------------------
 with bowl_tab:
     st.markdown('<div class="section-heading">🎯 Bowling Impact vs Opposition</div>', unsafe_allow_html=True)
 
     if bowling_df is None or bowling_df.empty:
-        st.info("No bowling profiles available for this opposition yet.")
+        st.info("No bowling data.")
     else:
-        st.dataframe(bowling_df.head(top_n), use_container_width=True)
+        disp = bowling_df.head(top_n).copy()
+
+        # Round numeric columns for neat display
+        for c in ["Overs / Match","Wickets / Match","Economy"]:
+            if c in disp:
+                disp[c] = disp[c].astype(float).round(1)
+        if "Impact Score" in disp:
+            disp["Impact Score"] = disp["Impact Score"].astype(float).round(2)
+
+        st.dataframe(disp, use_container_width=True)
 
         st.markdown('<div class="section-heading">📈 Bowling Impact Score</div>', unsafe_allow_html=True)
 
-        bowl_chart = bowling_df.head(top_n).sort_values("Impact Score", ascending=True)
+        chart = disp.sort_values("Impact Score")
+        fig_b, ax_b = plt.subplots(figsize=(11, max(4, len(chart)*0.6)))
+        fig_b.patch.set_facecolor("#0b1220")
+        ax_b.set_facecolor("#020617")
+        for s in ax_b.spines.values():
+            s.set_visible(False)
 
-        # ---------- PREMIUM THEME BAR CHART (BOWLING) ----------
-        fig_bowl, ax_bowl = plt.subplots(figsize=(11, max(4, len(bowl_chart) * 0.6)))
-
-        fig_bowl.patch.set_facecolor("#0b1220")
-        ax_bowl.set_facecolor("#020617")
-
-        for spine in ax_bowl.spines.values():
-            spine.set_visible(False)
-
-        colors_b = np.linspace(0.2, 0.9, len(bowl_chart))
-        bars_b = ax_bowl.barh(
-            bowl_chart["Player"],
-            bowl_chart["Impact Score"],
-            height=0.55,
-            color=[plt.cm.Greens(c) for c in colors_b],
+        cvals = np.linspace(0.2,0.9,len(chart))
+        bars_b = ax_b.barh(
+            chart["Player"],
+            chart["Impact Score"],
+            color=[plt.cm.Greens(c) for c in cvals],
             edgecolor="#022c22",
-            linewidth=1.2,
         )
 
-        ax_bowl.grid(axis="x", linestyle="--", alpha=0.35, color="#4b5563")
-        ax_bowl.set_axisbelow(True)
+        mn, mx = chart["Impact Score"].min(), chart["Impact Score"].max()
+        span = mx - mn if mx != mn else 1
+        pad = span * 0.18
+        ax_b.set_xlim(mn - pad, mx + pad)
 
-        ax_bowl.set_title(
-            f"Bowling Impact vs {target_opp}",
-            fontsize=18,
-            fontweight="bold",
-            color="#e2e8f0",
-            pad=15,
-        )
-        ax_bowl.set_xlabel("Impact Score", fontsize=13, color="#cbd5e1")
-        ax_bowl.set_ylabel("Player", fontsize=13, color="#cbd5e1")
-        ax_bowl.tick_params(colors="#e2e8f0", labelsize=12)
+        ax_b.grid(axis="x", linestyle="--", alpha=0.35)
+        ax_b.tick_params(colors="#e2e8f0")
+        ax_b.set_title(f"Bowling Impact vs {target_opp}", color="#e2e8f0", fontsize=18)
+        ax_b.set_xlabel("Impact Score", color="#e2e8f0")
 
-        for i, (bar, v) in enumerate(zip(bars_b, bowl_chart["Impact Score"])):
-            ax_bowl.text(
-                v + 0.02,
-                i,
+        off = span * 0.03
+        for b,v in zip(bars_b, chart["Impact Score"]):
+            y = b.get_y() + b.get_height()/2
+            ax_b.text(
+                v + off if v >= 0 else v - off,
+                y,
                 f"{v:.2f}",
                 va="center",
-                fontsize=12,
+                ha="left" if v >= 0 else "right",
                 color="#e5e7eb",
                 fontweight="bold",
             )
 
-        st.pyplot(fig_bowl)
+        st.pyplot(fig_b)
 
         st.markdown('<div class="section-heading">🧠 Bowling Strategy Insights</div>', unsafe_allow_html=True)
+        bmap = {"Strike":"badge-excellent","Control":"badge-good","Support":"badge-moderate"}
 
-        bowl_badge_map = {
-            "Strike": "badge-excellent",
-            "Control": "badge-good",
-            "Support": "badge-moderate",
-        }
-
-        for idx, row in bowling_df.head(top_n).iterrows():
-            cat_text = str(row["Impact Category"])
+        for _, r in chart.iterrows():
+            cat_text = r["Impact Category"]
+            base_cat = "Support"
             if "Strike" in cat_text:
                 base_cat = "Strike"
             elif "Control" in cat_text:
                 base_cat = "Control"
-            else:
-                base_cat = "Support"
+            badge_class = bmap.get(base_cat, "badge-moderate")
+            head = f"<b>{r['Player']} ({r['Role']})</b> <span class='badge {badge_class}'>{cat_text}</span>"
 
-            badge_class = bowl_badge_map.get(base_cat, "badge-moderate")
-
-            header_html = (
-                f"<span><b>{int(idx)}. {row['Player']} ({row['Role']})</b></span> "
-                f"&nbsp;&nbsp;<span class='badge {badge_class}'>{cat_text}</span>"
-            )
-
-            with st.expander("", expanded=False):
-                st.markdown(header_html, unsafe_allow_html=True)
-                st.write(f"**Type / Phase:** {row['Type']} | {row['Phase']}")
+            with st.expander(r["Player"]):
+                st.markdown(head, unsafe_allow_html=True)
                 st.write(
-                    f"**Overs / Match:** {row['Overs / Match']}  "
-                    f"| **Wickets / Match:** {row['Wickets / Match']}  "
-                    f"| **Economy:** {row['Economy']}"
+                    f"**Type / Phase:** {r['Type']} | {r['Phase']}\n\n"
+                    f"**Overs / Match:** {r['Overs / Match']}  |  "
+                    f"**Wickets / Match:** {r['Wickets / Match']}  |  "
+                    f"**Economy:** {r['Economy']}\n\n"
+                    f"**Impact Score:** {r['Impact Score']}\n\n"
+                    f"**Strategy Tip:** {r['Bowling Tip']}"
                 )
-                st.write(f"**Impact Score:** {row['Impact Score']}")
-                st.write(f"**Strategy Tip:** {row['Bowling Tip']}")
 
 # -------------------------------------------------
 # VENUE MAP TAB
@@ -588,27 +448,25 @@ with bowl_tab:
 with map_tab:
     st.markdown('<div class="section-heading">🗺 Animated Venue Impact Map</div>', unsafe_allow_html=True)
 
-    venue_df = build_venue_df()
-    if venue_df.empty:
-        st.info("No venue coordinates configured yet.")
+    vdf = build_venue_df()
+    if vdf.empty:
+        st.info("No venues configured yet.")
     else:
-        # Focus dropdown
         focus_choice = st.selectbox(
             "Focus view",
-            ["All venues"] + venue_df["venue"].tolist(),
+            ["All venues"] + vdf["venue"].tolist(),
             index=0,
         )
 
-        # Animation slider for pulsing effect
         frame = st.slider(
             "Pulse animation frame",
             min_value=0,
             max_value=100,
             value=0,
-            help="Slide to see neon pulses around venues.",
+            help="Slide to animate neon pulses on stadiums.",
         )
 
-        df_map = venue_df.copy()
+        df_map = vdf.copy()
         base_radius = 40000
         step = 4000
         frame_mod = frame % 20
@@ -622,7 +480,6 @@ with map_tab:
         df_map["pulse_radius"] = pulse_radii
         df_map["height"] = heights
 
-        # View state
         if focus_choice == "All venues":
             view_state = pdk.ViewState(
                 latitude=df_map["lat"].mean(),
@@ -632,16 +489,15 @@ with map_tab:
                 bearing=15,
             )
         else:
-            row = df_map[df_map["venue"] == focus_choice].iloc[0]
+            r = df_map[df_map["venue"] == focus_choice].iloc[0]
             view_state = pdk.ViewState(
-                latitude=row["lat"],
-                longitude=row["lon"],
+                latitude=r["lat"],
+                longitude=r["lon"],
                 zoom=7,
                 pitch=60,
                 bearing=30,
             )
 
-        # Country borders overlay
         country_layer = pdk.Layer(
             "GeoJsonLayer",
             data="https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json",
@@ -652,7 +508,6 @@ with map_tab:
             opacity=0.25,
         )
 
-        # 3D columns (stadium peaks)
         column_layer = pdk.Layer(
             "ColumnLayer",
             data=df_map,
@@ -665,7 +520,6 @@ with map_tab:
             extruded=True,
         )
 
-        # Neon pulsing scatter
         neon_layer = pdk.Layer(
             "ScatterplotLayer",
             data=df_map,
@@ -706,7 +560,7 @@ with map_tab:
                 <b>Legend:</b>
                 🔵 <b>Neon rings</b> = active venue pulse &nbsp; | &nbsp;
                 ⬛ <b>3D columns</b> = relative venue prominence &nbsp; | &nbsp;
-                📍 <b>Center</b> = venue location
+                📍 <b>Center</b> = current focus view
             </div>
             """,
             unsafe_allow_html=True,
