@@ -126,10 +126,19 @@ df_full.rename(columns={"X4s": "X4S", "X6s": "X6S"}, inplace=True)
 # target category
 df_full["Performance_Category"] = df_full["Runs"].apply(categorize)
 
+# Ensure required columns exist
+REQUIRED_COLS = ["Player", "Opposition", "Ground"]
+
+for col in REQUIRED_COLS:
+    if col not in df_full.columns:
+        df_full[col] = "Unknown"  # fallback to avoid crash
+
+# Drop rows with missing crucial numeric values only
 df_full.dropna(
-    subset=["BF", "SR", "X4S", "X6S", "Player", "Opposition", "Ground", "Performance_Category"],
+    subset=["BF", "SR", "X4S", "X6S", "Performance_Category"],
     inplace=True,
 )
+
 
 FEATURES = ["BF", "SR", "Opposition", "Ground", "Player", "X4S", "X6S", "Mins"]
 TARGET = "Performance_Category"
