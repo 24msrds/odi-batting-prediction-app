@@ -15,7 +15,7 @@ from tabulate import tabulate
 import matplotlib.pyplot as plt
 
 # ------------------------------------------------
-# 1. LOAD DATA (LOCAL CSV, NOT /content/)
+# 1. LOAD DATA (LOCAL CSV)
 # ------------------------------------------------
 
 CSV_FILE = "Combined_Top5_Batsmen.csv"   # keep CSV in same folder
@@ -36,11 +36,13 @@ def categorize(runs: float) -> str:
     else:
         return "Low (0-20)"
 
+
 def train_and_evaluate(model, X_train, X_test, y_train, y_test):
     """Trains model & returns (trained_model, accuracy)."""
     model.fit(X_train, y_train)
     accuracy = accuracy_score(y_test, model.predict(X_test))
     return model, accuracy
+
 
 # ------------------------------------------------
 # 2. CLEANING & FEATURE ENGINEERING
@@ -61,7 +63,7 @@ OPPONENT_MAPPING = {
     "v Scotland": "SCO",
 }
 
-# shorten Opposition, but only if column exists
+# Shorten Opposition, but only if column exists
 if "Opposition" in df_full.columns:
     df_full["Opposition"] = (
         df_full["Opposition"]
@@ -71,30 +73,9 @@ if "Opposition" in df_full.columns:
         .fillna(df_full["Opposition"].astype(str).str.strip())
     )
 else:
-    # if Opposition column missing, create a generic one so code doesn't crash
+    # If Opposition column missing, create a generic one so code doesn't crash
     df_full["Opposition"] = "Unknown"
 
-# numeric columns
-# Standardize key column names to expected format
-COLUMN_RENAMES = {
-    "R": "Runs",
-    "Rns": "Runs",
-    "Run": "Runs",
-    "BF": "BF",
-    "B": "BF",
-    "SR": "SR",
-    "Strike Rate": "SR",
-    "4s": "X4S",
-    "X4s": "X4S",
-    "6s": "X6S",
-    "X6s": "X6S",
-    "Minutes": "Mins",
-    "Mins": "Mins",
-}
-
-df_full.rename(columns=COLUMN_RENAMES, inplace=True)
-
-# Ensure numeric fields exist even if missing in CSV
 # Standardize key column names to expected format
 COLUMN_RENAMES = {
     "R": "Runs",
@@ -120,15 +101,14 @@ for col in ["Runs", "BF", "SR", "X4S", "X6S", "Mins"]:
         df_full[col] = 0  # fallback safe value
     df_full[col] = pd.to_numeric(df_full[col], errors="coerce")
 
-# consistent names
+# Consistent names
 df_full.rename(columns={"X4s": "X4S", "X6s": "X6S"}, inplace=True)
 
-# target category
+# Target category
 df_full["Performance_Category"] = df_full["Runs"].apply(categorize)
 
 # Ensure required columns exist
 REQUIRED_COLS = ["Player", "Opposition", "Ground"]
-
 for col in REQUIRED_COLS:
     if col not in df_full.columns:
         df_full[col] = "Unknown"  # fallback to avoid crash
@@ -138,7 +118,6 @@ df_full.dropna(
     subset=["BF", "SR", "X4S", "X6S", "Performance_Category"],
     inplace=True,
 )
-
 
 FEATURES = ["BF", "SR", "Opposition", "Ground", "Player", "X4S", "X6S", "Mins"]
 TARGET = "Performance_Category"
@@ -271,18 +250,36 @@ if len(player_averages.index.unique()) <= 1 or "Unknown" in player_averages.inde
 
 
 def generate_player_tip(predicted_category: str, opposition: str) -> str:
+    """Return a human-readable, actionable tip based on category."""
     if "Excellent" in predicted_category:
-        return f"🌟 Maintain: Continue aggressive play vs {opposition}."
+        return (
+            f"🌟 Maintain: Back this player to anchor the innings vs {opposition}. "
+            f"Give strike early and let them play their natural game."
+        )
     if "Good" in predicted_category:
-        return f"📈 Focus: Convert 50s into 100s vs {opposition}."
+        return (
+            f"📈 Conversion focus: Ideal to bat in top 3 vs {opposition}. "
+            f"Work on turning 50s into 100s and rotating strike in middle overs."
+        )
     if "Moderate" in predicted_category:
-        return f"⚠ Improve: Build partnerships vs {opposition}."
+        return (
+            f"⚠ Stability needed: Use this player as a middle-order stabiliser vs {opposition}. "
+            f"Target strike-rotation and build partnerships rather than big shots early."
+        )
     if "Low" in predicted_category:
-        return f"🚨 Defensive: Avoid early wickets vs {opposition}."
+        return (
+            f"🚨 Defensive: Avoid exposing this player too early vs {opposition}. "
+            f"Send after a platform is set; focus on minimizing dot balls and risk."
+        )
     return "No specific tip."
 
+
 def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground: str) -> pd.DataFrame:
-    """Main function used by app.py to get ranked players for a given opposition & ground."""
+    """
+    Main function used by app.py to get ranked players for a given
+    opposition & ground. Final category is based on Avg Runs (and
+    actual vs this opposition if available) for clearer buckets.
+    """
     player_results = []
 
     for player in player_averages.index.unique():
@@ -291,7 +288,9 @@ def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground
             continue
 
         avg_runs = player_averages.loc[player]["Runs"]
-        player_data = df_full[(df_full["Player"] == player) & (df_full["Opposition"] == target_opp)]
+        player_data = df_full[
+            (df_full["Player"] == player) & (df_full["Opposition"] == target_opp)
+        ]
         actual_runs = player_data["Runs"].mean() if not player_data.empty else np.nan
 
         player_avg = player_averages.loc[player].to_dict()
@@ -306,20 +305,25 @@ def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground
             "Player": [player],
         }
 
+        # ML prediction computed but not shown directly (dashboard uses rule-based category)
         X_pred = pd.DataFrame(sample_input)
         X_pred_encoded = pd.get_dummies(
             X_pred, columns=["Opposition", "Ground", "Player"], drop_first=True
         )
         X_pred_aligned = X_pred_encoded.reindex(columns=X_cols, fill_value=0)
+        _ = best_model.predict(X_pred_aligned)  # prediction not used directly
 
-        pred_class = le_obj.inverse_transform(best_model.predict(X_pred_aligned))[0]
+        # Rule-based category from overall average
+        rule_category = categorize(avg_runs)
 
+        # If we have actual vs this opposition, let that dominate category
         if not np.isnan(actual_runs):
             actual_category = categorize(actual_runs)
-            if actual_category != pred_class:
-                pred_class = actual_category
+            final_category = actual_category
+        else:
+            final_category = rule_category
 
-        tip = generate_player_tip(pred_class, target_opp)
+        tip = generate_player_tip(final_category, target_opp)
 
         player_results.append(
             {
@@ -329,7 +333,7 @@ def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground
                 f"Actual Runs vs {target_opp}": round(actual_runs, 1)
                 if not np.isnan(actual_runs)
                 else "N/A",
-                "Predicted Category": pred_class,
+                "Predicted Category": final_category,
                 "Actionable Tip": tip,
             }
         )
@@ -340,6 +344,7 @@ def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground
         results_df.index = results_df.index + 1
         results_df.index.name = "Rank"
     return results_df
+
 
 # ------------------------------------------------
 # 5. HELPER FOR STREAMLIT APP
@@ -357,6 +362,7 @@ def get_trained_objects():
         "model_accuracy": MODEL_ACCURACY,
         "model_name": DEPLOYMENT_MODEL_NAME,
     }
+
 
 # Optional: CLI run (won’t run inside Streamlit import)
 if __name__ == "__main__":
