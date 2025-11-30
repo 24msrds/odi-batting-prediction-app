@@ -400,6 +400,9 @@ def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground
         else:
             final_category = rule_category
 
+        # For display: if no actual vs this opposition, fall back to overall avg
+        display_actual = actual_runs if not np.isnan(actual_runs) else avg_runs
+
         tip = generate_player_tip(final_category, target_opp)
 
         player_results.append(
@@ -407,9 +410,7 @@ def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground
                 "Player": player,
                 "Role": PLAYER_ROLES.get(player, "Unknown"),
                 "Avg Runs": round(avg_runs, 1),
-                f"Actual Runs vs {target_opp}": round(actual_runs, 1)
-                if not np.isnan(actual_runs)
-                else "N/A",
+                f"Actual Runs vs {target_opp}": round(display_actual, 1),
                 "Predicted Category": final_category,
                 "Actionable Tip": tip,
             }
