@@ -18,23 +18,22 @@ st.markdown(
     """
     <style>
 
-    /* -------- GLOBAL PAGE BACKGROUND & TEXT -------- */
+    /* -------- GLOBAL PAGE BACKGROUND & TEXT (OPTION A) -------- */
     .main, .block-container {
-        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 35%, #93c5fd 70%, #e0f2fe 100%);
-        color: #0f172a;
+        background: linear-gradient(140deg, #0a192f 0%, #112d4e 40%, #1b3b5f 100%);
+        color: #e2e8f0;
     }
 
     body {
         font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Roboto", sans-serif;
     }
 
-    /* Center content a bit nicer */
     .block-container {
         padding-top: 1.5rem;
         padding-bottom: 3rem;
     }
 
-    /* -------- SIDEBAR -------- */
+    /* -------- SIDEBAR (Match Settings - you liked this vibe) -------- */
     section[data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0f172a 0%, #1d4ed8 55%, #0ea5e9 100%);
         border-right: 2px solid rgba(191, 219, 254, 0.6);
@@ -52,20 +51,20 @@ st.markdown(
     .metric-card {
         padding: 1.1rem 1.6rem;
         border-radius: 1rem;
-        background: rgba(255, 255, 255, 0.85);
-        border: 1px solid rgba(148, 163, 184, 0.6);
-        box-shadow: 0 14px 40px rgba(15, 23, 42, 0.25);
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        box-shadow: 0 16px 45px rgba(15, 23, 42, 0.8);
         backdrop-filter: blur(12px);
         transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
     .metric-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 24px 60px rgba(30, 64, 175, 0.45);
-        border-color: rgba(59, 130, 246, 0.9);
+        box-shadow: 0 26px 70px rgba(37, 99, 235, 0.75);
+        border-color: rgba(59, 130, 246, 0.95);
     }
     .metric-label {
         font-size: 0.75rem;
-        color: #64748b;
+        color: #9ca3af;
         margin-bottom: 0.15rem;
         text-transform: uppercase;
         letter-spacing: 0.08em;
@@ -73,7 +72,7 @@ st.markdown(
     .metric-value {
         font-size: 1.3rem;
         font-weight: 700;
-        color: #0f172a;
+        color: #e5e7eb;
     }
 
     /* -------- CHIP BADGES (Opposition, Venue, Top N) -------- */
@@ -88,7 +87,7 @@ st.markdown(
         background: linear-gradient(120deg, #0ea5e9, #2563eb);
         border: 1px solid rgba(191, 219, 254, 0.9);
         color: #f9fafb;
-        box-shadow: 0 10px 25px rgba(37, 99, 235, 0.45);
+        box-shadow: 0 10px 25px rgba(37, 99, 235, 0.6);
     }
 
     .chip-label {
@@ -122,11 +121,11 @@ st.markdown(
         gap: 0.35rem;
         padding: 0.35rem 0.9rem;
         border-radius: 999px;
-        background: rgba(239, 246, 255, 0.95);
-        border: 1px solid rgba(59, 130, 246, 0.8);
+        background: rgba(15, 23, 42, 0.88);
+        border: 1px solid rgba(59, 130, 246, 0.9);
         margin-bottom: 0.4rem;
-        color: #0f172a;
-        box-shadow: 0 6px 18px rgba(37, 99, 235, 0.2);
+        color: #e5e7eb;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.8);
     }
 
     /* -------- TABS STYLING -------- */
@@ -136,35 +135,35 @@ st.markdown(
     .stTabs [data-baseweb="tab"] {
         border-radius: 999px;
         padding: 0.55rem 1.1rem;
-        background: rgba(219, 234, 254, 0.9);
-        color: #1e3a8a;
+        background: rgba(30, 64, 175, 0.55);
+        color: #e5e7eb;
         font-weight: 500;
         border: 1px solid transparent;
         transition: 0.2s ease;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        background: linear-gradient(120deg, #60a5fa, #3b82f6);
+        background: linear-gradient(120deg, #3b82f6, #1d4ed8);
         color: white;
     }
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: linear-gradient(120deg, #2563eb, #1d4ed8);
+        background: linear-gradient(120deg, #1d4ed8, #0ea5e9);
         color: white;
         border-color: rgba(191, 219, 254, 0.9);
         font-weight: 650;
-        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.45);
+        box-shadow: 0 8px 22px rgba(37, 99, 235, 0.7);
     }
 
     /* -------- DATAFRAME TABLE -------- */
     .dataframe {
         border-radius: 0.75rem;
         overflow: hidden;
-        background: #eff6ff;
+        background: #020617;
     }
 
     /* -------- EXPANDER STYLING -------- */
     .streamlit-expanderHeader {
-        background: #dbeafe !important;
-        color: #0f172a !important;
+        background: #0b1220 !important;
+        color: #e5e7eb !important;
         font-weight: 650;
         border-radius: 0.5rem !important;
     }
@@ -340,7 +339,7 @@ with bat_tab:
         ax.set_title(f"Average Runs vs {target_opp} at {target_ground}")
 
         for i, v in enumerate(chart_df["Avg Runs"]):
-            ax.text(v, i, f"{v:.1f}", va="center")
+            ax.text(v, i, f"{v:.1f}", va="center", color="white")
 
         st.pyplot(fig)
 
@@ -402,7 +401,7 @@ with bowl_tab:
         ax_bowl.set_title(f"Bowling Impact vs {target_opp}")
 
         for i, v in enumerate(bowl_chart["Impact Score"]):
-            ax_bowl.text(v, i, f"{v:.2f}", va="center")
+            ax_bowl.text(v, i, f"{v:.2f}", va="center", color="white")
 
         st.pyplot(fig_bowl)
 
