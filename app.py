@@ -10,7 +10,7 @@ import project_model  # our ML backend
 # Page Config + Theme Styles
 # -----------------------------
 st.set_page_config(
-    page_title="ODI Performance Studio",
+    page_title="ODI PERFORMENCE STUDIO",
     page_icon="🏏",
     layout="wide",
 )
@@ -127,6 +127,35 @@ st.markdown(
         margin-bottom: 0.4rem;
         color: #e5e7eb;
         box-shadow: 0 6px 18px rgba(15, 23, 42, 0.8);
+    }
+
+    /* -------- TABS STYLING (pill tabs) -------- */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+        border-bottom: none;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 999px;
+        padding: 0.55rem 1.1rem;
+        background: rgba(30, 64, 175, 0.55);
+        color: #e5e7eb;
+        font-weight: 500;
+        border: 1px solid transparent;
+        transition: 0.2s ease;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        background: linear-gradient(120deg, #3b82f6, #1d4ed8);
+        color: white;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(120deg, #1d4ed8, #0ea5e9);
+        color: white;
+        border-color: rgba(191, 219, 254, 0.9);
+        font-weight: 650;
+        box-shadow: 0 8px 22px rgba(37, 99, 235, 0.7);
+    }
+    .stTabs [data-baseweb="tab-highlight"] {
+        background-color: transparent !important; /* hide red underline */
     }
 
     /* -------- EXPANDERS -------- */
@@ -298,7 +327,7 @@ if hasattr(project_model, "get_bowling_impact_df"):
     bowling_df = project_model.get_bowling_impact_df(target_opp)
 
 # Tabs
-bat_tab, bowl_tab, map_tab = st.tabs(["🏏 Batting Analysis", "🎯 Bowling Analysis", "🗺 Venue Map"])
+bat_tab, bowl_tab, map_tab = st.tabs([" Batting Analysis", " Bowling Analysis", " Venue Map"])
 
 # -------------------------------------------------
 # BAT TAB
@@ -340,7 +369,7 @@ with bat_tab:
         st.pyplot(fig)
 
         # Insights
-        st.markdown('<div class="section-heading">🧠 Batting Insights</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-heading"> Batting Insights</div>', unsafe_allow_html=True)
         cat_map = {"Excellent":"badge-excellent","Good":"badge-good","Moderate":"badge-moderate","Low":"badge-low"}
 
         for _, row in ranked_df.head(top_n).iterrows():
@@ -418,7 +447,7 @@ with bowl_tab:
 
         st.pyplot(fig_b)
 
-        st.markdown('<div class="section-heading">🧠 Bowling Strategy Insights</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-heading"> Bowling Strategy Insights</div>', unsafe_allow_html=True)
         bmap = {"Strike":"badge-excellent","Control":"badge-good","Support":"badge-moderate"}
 
         for _, r in chart.iterrows():
