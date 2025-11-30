@@ -6,7 +6,8 @@ import project_model  # our ML backend
 
 # -----------------------------
 # Load trained objects
-# -----------------------------
+# 
+PLAYER_NATIONALITY = trained["player_nationality"]
 trained = project_model.get_trained_objects()
 
 MODEL = trained["best_model"]
@@ -18,10 +19,16 @@ MODEL_NAME = trained["model_name"]
 
 # basic lists
 # Filter out missing/unknown values
-OPPONENTS = sorted([x for x in DF_FULL["Opposition"].unique() if pd.notna(x) and x != "Unknown"])
-GROUNDS = sorted([x for x in DF_FULL["Ground"].unique() if pd.notna(x) and x != "Unknown"])
-
-DEFAULT_GROUND = GROUNDS[0] if GROUNDS else "Neutral Venue"
+OPPONENTS = sorted(set(PLAYER_NATIONALITY.values()))  # ['AUS','ENG','IND',...]
+GROUNDS = [
+    "Delhi", "Mumbai", "Chennai", "Kolkata", "Ahmedabad",
+    "Melbourne", "Sydney", "Adelaide", "Perth",
+    "Lords", "The Oval", "Birmingham",
+    "Abu Dhabi", "Dubai", "Sharjah",
+    "Johannesburg", "Cape Town", "Durban",
+    "Wellington", "Auckland", "Christchurch",
+]
+DEFAULT_GROUND = "Neutral Venue"
 
 
 # -----------------------------
