@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import pydeck as pdk  # 🔹 for the animated venue map
+import numpy as np     # 🔹 for gradient colors
 
 import project_model  # our ML backend
 
@@ -19,7 +20,7 @@ st.markdown(
     """
     <style>
 
-    /* -------- GLOBAL PAGE BACKGROUND & TEXT (OPTION A) -------- */
+    /* -------- GLOBAL PAGE BACKGROUND & TEXT -------- */
     .main, .block-container {
         background: linear-gradient(140deg, #0a192f 0%, #112d4e 40%, #1b3b5f 100%);
         color: #e2e8f0;
@@ -34,7 +35,7 @@ st.markdown(
         padding-bottom: 3rem;
     }
 
-    /* -------- SIDEBAR (Match Settings - you liked this vibe) -------- */
+    /* -------- SIDEBAR -------- */
     section[data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0f172a 0%, #1d4ed8 55%, #0ea5e9 100%);
         border-right: 2px solid rgba(191, 219, 254, 0.6);
@@ -206,7 +207,7 @@ GROUNDS = [
 ]
 DEFAULT_GROUND = "Neutral Venue"
 
-# ---- Map metadata: lat/lon, team, country, logo ----
+# ---- Map metadata: lat/lon, team, country ----
 VENUE_META = {
     "Delhi":       {"lat": 28.6139,  "lon": 77.2090,  "team": "IND", "country": "India"},
     "Mumbai":      {"lat": 19.0760,  "lon": 72.8777,  "team": "IND", "country": "India"},
@@ -398,14 +399,54 @@ with bat_tab:
 
         chart_df = ranked_df.head(top_n).sort_values("Avg Runs", ascending=True)
 
-        fig, ax = plt.subplots(figsize=(8, max(4, len(chart_df) * 0.4)))
-        ax.barh(chart_df["Player"], chart_df["Avg Runs"])
-        ax.set_xlabel("Average Runs")
-        ax.set_ylabel("Player")
-        ax.set_title(f"Average Runs vs {target_opp} at {target_ground}")
+        # ---------- PREMIUM THEME BAR CHART (BATTING) ----------
+        fig, ax = plt.subplots(figsize=(11, max(4, len(chart_df) * 0.6)))
 
-        for i, v in enumerate(chart_df["Avg Runs"]):
-            ax.text(v, i, f"{v:.1f}", va="center", color="white")
+        fig.patch.set_facecolor("#0b1220")
+        ax.set_facecolor("#020617")
+
+        # Remove spines
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+        # Gradient blue bars
+        colors = np.linspace(0.3, 0.85, len(chart_df))
+        bars = ax.barh(
+            chart_df["Player"],
+            chart_df["Avg Runs"],
+            height=0.55,
+            color=[plt.cm.Blues(c) for c in colors],
+            edgecolor="#0f172a",
+            linewidth=1.2,
+        )
+
+        # Grid
+        ax.grid(axis="x", linestyle="--", alpha=0.35, color="#475569")
+        ax.set_axisbelow(True)
+
+        # Titles & labels
+        ax.set_title(
+            f"Average Runs vs {target_opp} at {target_ground}",
+            fontsize=18,
+            fontweight="bold",
+            color="#e2e8f0",
+            pad=15,
+        )
+        ax.set_xlabel("Average Runs", fontsize=13, color="#cbd5e1")
+        ax.set_ylabel("Player", fontsize=13, color="#cbd5e1")
+        ax.tick_params(colors="#e2e8f0", labelsize=12)
+
+        # Values at end of bars
+        for i, (bar, val) in enumerate(zip(bars, chart_df["Avg Runs"])):
+            ax.text(
+                val + 1,
+                i,
+                f"{val:.1f}",
+                va="center",
+                fontsize=12,
+                color="#e5e7eb",
+                fontweight="bold",
+            )
 
         st.pyplot(fig)
 
@@ -460,14 +501,49 @@ with bowl_tab:
 
         bowl_chart = bowling_df.head(top_n).sort_values("Impact Score", ascending=True)
 
-        fig_bowl, ax_bowl = plt.subplots(figsize=(8, max(4, len(bowl_chart) * 0.4)))
-        ax_bowl.barh(bowl_chart["Player"], bowl_chart["Impact Score"])
-        ax_bowl.set_xlabel("Impact Score")
-        ax_bowl.set_ylabel("Player")
-        ax_bowl.set_title(f"Bowling Impact vs {target_opp}")
+        # ---------- PREMIUM THEME BAR CHART (BOWLING) ----------
+        fig_bowl, ax_bowl = plt.subplots(figsize=(11, max(4, len(bowl_chart) * 0.6)))
 
-        for i, v in enumerate(bowl_chart["Impact Score"]):
-            ax_bowl.text(v, i, f"{v:.2f}", va="center", color="white")
+        fig_bowl.patch.set_facecolor("#0b1220")
+        ax_bowl.set_facecolor("#020617")
+
+        for spine in ax_bowl.spines.values():
+            spine.set_visible(False)
+
+        colors_b = np.linspace(0.2, 0.9, len(bowl_chart))
+        bars_b = ax_bowl.barh(
+            bowl_chart["Player"],
+            bowl_chart["Impact Score"],
+            height=0.55,
+            color=[plt.cm.Greens(c) for c in colors_b],
+            edgecolor="#022c22",
+            linewidth=1.2,
+        )
+
+        ax_bowl.grid(axis="x", linestyle="--", alpha=0.35, color="#4b5563")
+        ax_bowl.set_axisbelow(True)
+
+        ax_bowl.set_title(
+            f"Bowling Impact vs {target_opp}",
+            fontsize=18,
+            fontweight="bold",
+            color="#e2e8f0",
+            pad=15,
+        )
+        ax_bowl.set_xlabel("Impact Score", fontsize=13, color="#cbd5e1")
+        ax_bowl.set_ylabel("Player", fontsize=13, color="#cbd5e1")
+        ax_bowl.tick_params(colors="#e2e8f0", labelsize=12)
+
+        for i, (bar, v) in enumerate(zip(bars_b, bowl_chart["Impact Score"])):
+            ax_bowl.text(
+                v + 0.02,
+                i,
+                f"{v:.2f}",
+                va="center",
+                fontsize=12,
+                color="#e5e7eb",
+                fontweight="bold",
+            )
 
         st.pyplot(fig_bowl)
 
