@@ -17,113 +17,156 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Main background + text */
-    .main {
-        background: radial-gradient(circle at top left, #0f172a 0, #020617 40%, #000000 100%);
-        color: #e5e7eb;
+
+    /* -------- GLOBAL PAGE BACKGROUND & TEXT -------- */
+    .main, .block-container {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 35%, #93c5fd 70%, #e0f2fe 100%);
+        color: #0f172a;
     }
 
-    /* Sidebar */
+    body {
+        font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Roboto", sans-serif;
+    }
+
+    /* Center content a bit nicer */
+    .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 3rem;
+    }
+
+    /* -------- SIDEBAR -------- */
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #020617 0%, #111827 40%, #0f172a 100%);
-        border-right: 1px solid rgba(148, 163, 184, 0.4);
+        background: linear-gradient(180deg, #0f172a 0%, #1d4ed8 55%, #0ea5e9 100%);
+        border-right: 2px solid rgba(191, 219, 254, 0.6);
+        color: #e5f4ff;
     }
 
-    /* Sidebar labels */
-    section[data-testid="stSidebar"] .css-1d391kg, 
-    section[data-testid="stSidebar"] label {
-        color: #e5e7eb !important;
+    section[data-testid="stSidebar"] .css-1d391kg,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] span {
+        color: #e0f2fe !important;
         font-weight: 500;
     }
 
-    /* Metric cards */
+    /* -------- KPI Metric Cards -------- */
     .metric-card {
-        padding: 1rem 1.5rem;
+        padding: 1.1rem 1.6rem;
         border-radius: 1rem;
-        background: radial-gradient(circle at top left, rgba(96,165,250,0.14), rgba(15,23,42,0.9));
-        border: 1px solid rgba(148,163,184,0.4);
-        box-shadow: 0 18px 45px rgba(15,23,42,0.75);
-        backdrop-filter: blur(14px);
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.6);
+        box-shadow: 0 14px 40px rgba(15, 23, 42, 0.25);
+        backdrop-filter: blur(12px);
         transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
     .metric-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 28px 60px rgba(59,130,246,0.45);
-        border-color: rgba(59,130,246,0.9);
+        transform: translateY(-4px);
+        box-shadow: 0 24px 60px rgba(30, 64, 175, 0.45);
+        border-color: rgba(59, 130, 246, 0.9);
     }
     .metric-label {
-        font-size: 0.8rem;
-        color: #9ca3af;
+        font-size: 0.75rem;
+        color: #64748b;
         margin-bottom: 0.15rem;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.08em;
     }
     .metric-value {
-        font-size: 1.2rem;
-        font-weight: 600;
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #0f172a;
     }
 
-    /* Chip badges for context */
+    /* -------- CHIP BADGES (Opposition, Venue, Top N) -------- */
     .chip {
         display: inline-flex;
         align-items: center;
-        padding: 4px 12px;
+        padding: 6px 14px;
         border-radius: 999px;
-        font-size: 0.8rem;
-        font-weight: 500;
+        font-size: 0.82rem;
+        font-weight: 600;
         margin-right: 8px;
-        background: rgba(15,23,42,0.8);
-        border: 1px solid rgba(148,163,184,0.4);
-        color: #e5e7eb;
+        background: linear-gradient(120deg, #0ea5e9, #2563eb);
+        border: 1px solid rgba(191, 219, 254, 0.9);
+        color: #f9fafb;
+        box-shadow: 0 10px 25px rgba(37, 99, 235, 0.45);
     }
 
     .chip-label {
-        opacity: 0.7;
+        opacity: 0.9;
         margin-right: 6px;
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        font-size: 0.7rem;
+        font-size: 0.68rem;
     }
 
-    /* Category badges */
+    /* -------- CATEGORY BADGES -------- */
     .badge {
         display: inline-block;
-        padding: 3px 10px;
+        padding: 3px 11px;
         border-radius: 999px;
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 700;
         color: white;
     }
     .badge-excellent { background: linear-gradient(90deg, #22c55e, #16a34a); }
-    .badge-good { background: linear-gradient(90deg, #38bdf8, #0ea5e9); }
-    .badge-moderate { background: linear-gradient(90deg, #eab308, #facc15); color:#111827; }
+    .badge-good { background: linear-gradient(90deg, #0ea5e9, #2563eb); }
+    .badge-moderate { background: linear-gradient(90deg, #facc15, #eab308); color:#111827; }
     .badge-low { background: linear-gradient(90deg, #fb7185, #ef4444); }
 
-    /* Section titles */
+    /* -------- SECTION TITLES -------- */
     .section-heading {
-        font-size: 1.1rem;
-        font-weight: 600;
+        font-size: 1.05rem;
+        font-weight: 650;
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
-        padding: 0.25rem 0.75rem;
+        padding: 0.35rem 0.9rem;
         border-radius: 999px;
-        background: rgba(15,23,42,0.85);
-        border: 1px solid rgba(148,163,184,0.5);
-        margin-bottom: 0.3rem;
+        background: rgba(239, 246, 255, 0.95);
+        border: 1px solid rgba(59, 130, 246, 0.8);
+        margin-bottom: 0.4rem;
+        color: #0f172a;
+        box-shadow: 0 6px 18px rgba(37, 99, 235, 0.2);
     }
 
-    /* Tabs accent (depends on Streamlit version, but this helps) */
+    /* -------- TABS STYLING -------- */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 0.4rem;
+        gap: 0.5rem;
     }
     .stTabs [data-baseweb="tab"] {
         border-radius: 999px;
-        padding: 0.5rem 1rem;
-        background: rgba(15,23,42,0.7);
+        padding: 0.55rem 1.1rem;
+        background: rgba(219, 234, 254, 0.9);
+        color: #1e3a8a;
+        font-weight: 500;
+        border: 1px solid transparent;
+        transition: 0.2s ease;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        background: rgba(30,64,175,0.8);
+        background: linear-gradient(120deg, #60a5fa, #3b82f6);
+        color: white;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(120deg, #2563eb, #1d4ed8);
+        color: white;
+        border-color: rgba(191, 219, 254, 0.9);
+        font-weight: 650;
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.45);
+    }
+
+    /* -------- DATAFRAME TABLE -------- */
+    .dataframe {
+        border-radius: 0.75rem;
+        overflow: hidden;
+        background: #eff6ff;
+    }
+
+    /* -------- EXPANDER STYLING -------- */
+    .streamlit-expanderHeader {
+        background: #dbeafe !important;
+        color: #0f172a !important;
+        font-weight: 650;
+        border-radius: 0.5rem !important;
     }
 
     </style>
