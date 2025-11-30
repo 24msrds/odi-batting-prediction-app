@@ -75,8 +75,49 @@ else:
     df_full["Opposition"] = "Unknown"
 
 # numeric columns
-cols_to_convert = ["Runs", "BF", "X4s", "X6s", "SR", "Mins"]
-for col in cols_to_convert:
+# Standardize key column names to expected format
+COLUMN_RENAMES = {
+    "R": "Runs",
+    "Rns": "Runs",
+    "Run": "Runs",
+    "BF": "BF",
+    "B": "BF",
+    "SR": "SR",
+    "Strike Rate": "SR",
+    "4s": "X4S",
+    "X4s": "X4S",
+    "6s": "X6S",
+    "X6s": "X6S",
+    "Minutes": "Mins",
+    "Mins": "Mins",
+}
+
+df_full.rename(columns=COLUMN_RENAMES, inplace=True)
+
+# Ensure numeric fields exist even if missing in CSV
+# Standardize key column names to expected format
+COLUMN_RENAMES = {
+    "R": "Runs",
+    "Rns": "Runs",
+    "Run": "Runs",
+    "BF": "BF",
+    "B": "BF",
+    "SR": "SR",
+    "Strike Rate": "SR",
+    "4s": "X4S",
+    "X4s": "X4S",
+    "6s": "X6S",
+    "X6s": "X6S",
+    "Minutes": "Mins",
+    "Mins": "Mins",
+}
+
+df_full.rename(columns=COLUMN_RENAMES, inplace=True)
+
+# Ensure numeric fields exist even if missing in CSV
+for col in ["Runs", "BF", "SR", "X4S", "X6S", "Mins"]:
+    if col not in df_full.columns:
+        df_full[col] = 0  # fallback safe value
     df_full[col] = pd.to_numeric(df_full[col], errors="coerce")
 
 # consistent names
