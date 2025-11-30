@@ -21,6 +21,10 @@ import matplotlib.pyplot as plt
 CSV_FILE = "Combined_Top5_Batsmen.csv"   # keep CSV in same folder
 df_full = pd.read_csv(CSV_FILE)
 
+# ✅ Remove spaces around column names: " Opposition " -> "Opposition"
+df_full.columns = df_full.columns.str.strip()
+
+
 def categorize(runs: float) -> str:
     """Assigns a categorical label based on runs scored."""
     if runs >= 100:
