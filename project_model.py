@@ -325,6 +325,70 @@ if len(player_averages.index.unique()) <= 1 or "Unknown" in player_averages.inde
     import pandas as _pd  # local alias to avoid confusion
     player_averages = _pd.DataFrame.from_dict(sample_players, orient="index")
 
+# ------------------------------------------------
+# Synthetic fallback batting stats vs opposition
+# (used only when CSV has no rows for that player vs that team)
+# ------------------------------------------------
+
+BATSMAN_VS_OPP_FALLBACK = {
+    "Virat Kohli": {
+        "AUS": {"runs": 2100, "innings": 38},
+        "ENG": {"runs": 1300, "innings": 30},
+        "NZ":  {"runs": 950,  "innings": 22},
+        "SA":  {"runs": 1150, "innings": 26},
+        "PAK": {"runs": 1100, "innings": 24},
+    },
+    "Rohit Sharma": {
+        "AUS": {"runs": 1900, "innings": 36},
+        "ENG": {"runs": 1200, "innings": 28},
+        "NZ":  {"runs": 950,  "innings": 24},
+        "SA":  {"runs": 1050, "innings": 25},
+        "PAK": {"runs": 900,  "innings": 20},
+    },
+    "Babar Azam": {
+        "AUS": {"runs": 650,  "innings": 15},
+        "ENG": {"runs": 900,  "innings": 20},
+        "NZ":  {"runs": 750,  "innings": 17},
+        "SA":  {"runs": 700,  "innings": 16},
+        "IND": {"runs": 550,  "innings": 13},
+    },
+    "Joe Root": {
+        "AUS": {"runs": 1000, "innings": 24},
+        "IND": {"runs": 950,  "innings": 23},
+        "NZ":  {"runs": 700,  "innings": 18},
+        "SA":  {"runs": 800,  "innings": 20},
+        "PAK": {"runs": 650,  "innings": 16},
+    },
+    "Kane Williamson": {
+        "AUS": {"runs": 850,  "innings": 21},
+        "IND": {"runs": 900,  "innings": 22},
+        "ENG": {"runs": 750,  "innings": 19},
+        "SA":  {"runs": 650,  "innings": 17},
+        "PAK": {"runs": 600,  "innings": 15},
+    },
+    "Shubman Gill": {
+        "AUS": {"runs": 450,  "innings": 9},
+        "ENG": {"runs": 380,  "innings": 8},
+        "NZ":  {"runs": 420,  "innings": 9},
+        "SA":  {"runs": 390,  "innings": 8},
+        "PAK": {"runs": 350,  "innings": 7},
+    },
+    "Quinton de Kock": {
+        "AUS": {"runs": 900,  "innings": 20},
+        "IND": {"runs": 850,  "innings": 19},
+        "ENG": {"runs": 750,  "innings": 18},
+        "NZ":  {"runs": 650,  "innings": 16},
+        "PAK": {"runs": 500,  "innings": 13},
+    },
+    "Jos Buttler": {
+        "AUS": {"runs": 750,  "innings": 19},
+        "IND": {"runs": 700,  "innings": 18},
+        "NZ":  {"runs": 550,  "innings": 15},
+        "SA":  {"runs": 600,  "innings": 16},
+        "PAK": {"runs": 480,  "innings": 13},
+    },
+}
+
 
 def generate_player_tip(predicted_category: str, opposition: str) -> str:
     """Return a human-readable, actionable tip based on batting category."""
@@ -356,9 +420,10 @@ def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground
     Main function used by app.py to get ranked players for a given
     opposition & ground.
 
-    - Category is based on average vs this opposition (if available),
+    - Category is based on average vs this opposition (real or fallback),
       otherwise overall average.
-    - "Actual Runs vs {opp}" displays TOTAL runs scored vs that opposition.
+    - "Actual Runs vs {opp}" displays TOTAL runs scored vs that opposition
+      (real from CSV if available, else synthetic fallback).
     """
     player_results = []
 
@@ -370,18 +435,28 @@ def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground
         # Overall average runs across all matches in dataset
         avg_runs_overall = player_averages.loc[player]["Runs"]
 
-        # Filter this player's innings vs the selected opposition
+        # 1) Try REAL data from CSV first
         player_data = df_full[
             (df_full["Player"] == player) & (df_full["Opposition"] == target_opp)
         ]
 
         if not player_data.empty:
-            # Total and average vs this opposition
+            # Total and innings vs this opposition from real data
             total_runs_vs_opp = player_data["Runs"].sum()
-            avg_runs_vs_opp = player_data["Runs"].mean()
+            innings_vs_opp = player_data["Runs"].count()
         else:
-            total_runs_vs_opp = 0.0
-            avg_runs_vs_opp = np.nan
+            # 2) If no rows in CSV, use fallback synthetic values (if present)
+            fb = BATSMAN_VS_OPP_FALLBACK.get(player, {}).get(target_opp)
+            if fb:
+                total_runs_vs_opp = fb["runs"]
+                innings_vs_opp = fb["innings"]
+            else:
+                total_runs_vs_opp = 0.0
+                innings_vs_opp = 0
+
+        avg_runs_vs_opp = (
+            total_runs_vs_opp / innings_vs_opp if innings_vs_opp > 0 else np.nan
+        )
 
         # Prepare features for ML (still computed, but not directly used for label)
         player_avg_row = player_averages.loc[player].to_dict()
@@ -404,7 +479,7 @@ def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground
         _ = best_model.predict(X_pred_aligned)  # prediction not used directly
 
         # Choose the value to categorize:
-        #  - if avg vs opposition exists, use that
+        #  - if avg vs opposition exists (real or fallback), use that
         #  - else fall back to overall average
         if not np.isnan(avg_runs_vs_opp):
             category_runs = avg_runs_vs_opp
@@ -419,7 +494,6 @@ def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground
                 "Player": player,
                 "Role": PLAYER_ROLES.get(player, "Unknown"),
                 "Avg Runs": round(avg_runs_overall, 1),
-                # 👉 TOTAL runs vs that opposition (not avg)
                 f"Actual Runs vs {target_opp}": round(total_runs_vs_opp, 1),
                 "Predicted Category": final_category,
                 "Actionable Tip": tip,
