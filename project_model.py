@@ -61,8 +61,18 @@ OPPONENT_MAPPING = {
     "v Scotland": "SCO",
 }
 
-# shorten Opposition
-df_full["Opposition"] = df_full["Opposition"].map(OPPONENT_MAPPING).fillna(df_full["Opposition"])
+# shorten Opposition, but only if column exists
+if "Opposition" in df_full.columns:
+    df_full["Opposition"] = (
+        df_full["Opposition"]
+        .astype(str)
+        .str.strip()
+        .map(OPPONENT_MAPPING)
+        .fillna(df_full["Opposition"].astype(str).str.strip())
+    )
+else:
+    # if Opposition column missing, create a generic one so code doesn't crash
+    df_full["Opposition"] = "Unknown"
 
 # numeric columns
 cols_to_convert = ["Runs", "BF", "X4s", "X6s", "SR", "Mins"]
