@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import pydeck as pdk  # 🔹 for the animated venue map
 
 import project_model  # our ML backend
 
@@ -205,6 +206,69 @@ GROUNDS = [
 ]
 DEFAULT_GROUND = "Neutral Venue"
 
+# ---- Map metadata: lat/lon, team, country, logo ----
+VENUE_META = {
+    "Delhi":       {"lat": 28.6139,  "lon": 77.2090,  "team": "IND", "country": "India"},
+    "Mumbai":      {"lat": 19.0760,  "lon": 72.8777,  "team": "IND", "country": "India"},
+    "Chennai":     {"lat": 13.0827,  "lon": 80.2707,  "team": "IND", "country": "India"},
+    "Kolkata":     {"lat": 22.5726,  "lon": 88.3639,  "team": "IND", "country": "India"},
+    "Ahmedabad":   {"lat": 23.0225,  "lon": 72.5714,  "team": "IND", "country": "India"},
+
+    "Melbourne":   {"lat": -37.8136, "lon": 144.9631, "team": "AUS", "country": "Australia"},
+    "Sydney":      {"lat": -33.8688, "lon": 151.2093, "team": "AUS", "country": "Australia"},
+    "Adelaide":    {"lat": -34.9285, "lon": 138.6007, "team": "AUS", "country": "Australia"},
+    "Perth":       {"lat": -31.9505, "lon": 115.8605, "team": "AUS", "country": "Australia"},
+
+    "Lords":       {"lat": 51.5299,  "lon": -0.1722,  "team": "ENG", "country": "England"},
+    "The Oval":    {"lat": 51.4837,  "lon": -0.1147,  "team": "ENG", "country": "England"},
+    "Birmingham":  {"lat": 52.4862,  "lon": -1.8904,  "team": "ENG", "country": "England"},
+
+    "Abu Dhabi":   {"lat": 24.4539,  "lon": 54.3773,  "team": "UAE", "country": "UAE"},
+    "Dubai":       {"lat": 25.2048,  "lon": 55.2708,  "team": "UAE", "country": "UAE"},
+    "Sharjah":     {"lat": 25.3463,  "lon": 55.4209,  "team": "UAE", "country": "UAE"},
+
+    "Johannesburg": {"lat": -26.2041, "lon": 28.0473,   "team": "SA", "country": "South Africa"},
+    "Cape Town":    {"lat": -33.9249, "lon": 18.4241,   "team": "SA", "country": "South Africa"},
+    "Durban":       {"lat": -29.8587, "lon": 31.0218,   "team": "SA", "country": "South Africa"},
+
+    "Wellington":  {"lat": -41.2865, "lon": 174.7762, "team": "NZ", "country": "New Zealand"},
+    "Auckland":    {"lat": -36.8485, "lon": 174.7633, "team": "NZ", "country": "New Zealand"},
+    "Christchurch":{"lat": -43.5321, "lon": 172.6362, "team": "NZ", "country": "New Zealand"},
+}
+
+def venue_color(team: str):
+    """Neon-ish RGBA colors per team."""
+    mapping = {
+        "IND": [37, 99, 235, 220],     # royal blue
+        "AUS": [234, 179, 8, 220],     # yellow
+        "ENG": [248, 113, 113, 220],   # red
+        "UAE": [45, 212, 191, 220],    # teal
+        "SA":  [74, 222, 128, 220],    # green
+        "NZ":  [129, 140, 248, 220],   # indigo
+    }
+    return mapping.get(team, [56, 189, 248, 220])  # default cyan
+
+def build_venue_df():
+    rows = []
+    for venue in GROUNDS:
+        if venue == "Neutral Venue":
+            continue
+        meta = VENUE_META.get(venue)
+        if not meta:
+            continue
+        rows.append(
+            {
+                "venue": venue,
+                "lat": meta["lat"],
+                "lon": meta["lon"],
+                "team": meta["team"],
+                "country": meta["country"],
+                "color": venue_color(meta["team"]),
+                "icon_name": "stadium",
+            }
+        )
+    return pd.DataFrame(rows)
+
 # -----------------------------
 # Sidebar controls
 # -----------------------------
@@ -311,8 +375,10 @@ bowling_df = None
 if hasattr(project_model, "get_bowling_impact_df"):
     bowling_df = project_model.get_bowling_impact_df(target_opp)
 
-# Tabs for Batting / Bowling
-bat_tab, bowl_tab = st.tabs(["🏏 Batting Analysis", "🎯 Bowling Analysis"])
+# Tabs for Batting / Bowling / Map
+bat_tab, bowl_tab, map_tab = st.tabs(
+    ["🏏 Batting Analysis", "🎯 Bowling Analysis", "🗺 Venue Map"]
+)
 
 # -------------------------------------------------
 # BAT TAB
@@ -439,3 +505,133 @@ with bowl_tab:
                 )
                 st.write(f"**Impact Score:** {row['Impact Score']}")
                 st.write(f"**Strategy Tip:** {row['Bowling Tip']}")
+
+# -------------------------------------------------
+# VENUE MAP TAB
+# -------------------------------------------------
+with map_tab:
+    st.markdown('<div class="section-heading">🗺 Animated Venue Impact Map</div>', unsafe_allow_html=True)
+
+    venue_df = build_venue_df()
+    if venue_df.empty:
+        st.info("No venue coordinates configured yet.")
+    else:
+        # Focus dropdown
+        focus_choice = st.selectbox(
+            "Focus view",
+            ["All venues"] + venue_df["venue"].tolist(),
+            index=0,
+        )
+
+        # Animation slider for pulsing effect
+        frame = st.slider(
+            "Pulse animation frame",
+            min_value=0,
+            max_value=100,
+            value=0,
+            help="Slide to see neon pulses around venues.",
+        )
+
+        df_map = venue_df.copy()
+        base_radius = 40000
+        step = 4000
+        frame_mod = frame % 20
+
+        pulse_radii = []
+        heights = []
+        for i in range(len(df_map)):
+            offset = (frame_mod + i * 5) % 20
+            pulse_radii.append(base_radius + offset * step)
+            heights.append(100000 + i * 30000)
+        df_map["pulse_radius"] = pulse_radii
+        df_map["height"] = heights
+
+        # View state
+        if focus_choice == "All venues":
+            view_state = pdk.ViewState(
+                latitude=df_map["lat"].mean(),
+                longitude=df_map["lon"].mean(),
+                zoom=1.8,
+                pitch=45,
+                bearing=15,
+            )
+        else:
+            row = df_map[df_map["venue"] == focus_choice].iloc[0]
+            view_state = pdk.ViewState(
+                latitude=row["lat"],
+                longitude=row["lon"],
+                zoom=7,
+                pitch=60,
+                bearing=30,
+            )
+
+        # Country borders overlay
+        country_layer = pdk.Layer(
+            "GeoJsonLayer",
+            data="https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json",
+            stroked=True,
+            filled=False,
+            get_line_color=[96, 165, 250],
+            line_width_min_pixels=0.5,
+            opacity=0.25,
+        )
+
+        # 3D columns (stadium peaks)
+        column_layer = pdk.Layer(
+            "ColumnLayer",
+            data=df_map,
+            get_position=["lon", "lat"],
+            get_elevation="height",
+            elevation_scale=1,
+            radius=30000,
+            get_fill_color="color",
+            pickable=True,
+            extruded=True,
+        )
+
+        # Neon pulsing scatter
+        neon_layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=df_map,
+            get_position=["lon", "lat"],
+            get_radius="pulse_radius",
+            get_fill_color="color",
+            get_line_color=[255, 255, 255],
+            line_width_min_pixels=1,
+            stroked=True,
+            filled=True,
+            opacity=0.35,
+            pickable=True,
+        )
+
+        deck = pdk.Deck(
+            layers=[country_layer, column_layer, neon_layer],
+            initial_view_state=view_state,
+            map_style="mapbox://styles/mapbox/navigation-night-v1",
+            tooltip={
+                "html": "<b>{venue}</b><br/>Team: {team}<br/>Country: {country}",
+                "style": {"color": "white"},
+            },
+        )
+
+        st.pydeck_chart(deck)
+
+        st.markdown(
+            """
+            <div style="
+                margin-top: 0.5rem;
+                padding: 0.5rem 0.75rem;
+                background: rgba(15, 23, 42, 0.85);
+                border-radius: 0.5rem;
+                border: 1px solid rgba(96, 165, 250, 0.8);
+                font-size: 0.8rem;
+                color: #e5e7eb;
+            ">
+                <b>Legend:</b>
+                🔵 <b>Neon rings</b> = active venue pulse &nbsp; | &nbsp;
+                ⬛ <b>3D columns</b> = relative venue prominence &nbsp; | &nbsp;
+                📍 <b>Center</b> = venue location
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
