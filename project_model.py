@@ -354,8 +354,11 @@ def generate_player_tip(predicted_category: str, opposition: str) -> str:
 def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground: str) -> pd.DataFrame:
     """
     Main function used by app.py to get ranked players for a given
-    opposition & ground. Final category is based on Avg Runs (and
-    actual vs this opposition if available) for clearer buckets.
+    opposition & ground.
+
+    - Category is based on average vs this opposition (if available),
+      otherwise overall average.
+    - "Actual Runs vs {opp}" displays TOTAL runs scored vs that opposition.
     """
     player_results = []
 
@@ -364,25 +367,35 @@ def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground
         if PLAYER_NATIONALITY.get(player, "Unknown") == target_opp:
             continue
 
-        avg_runs = player_averages.loc[player]["Runs"]
+        # Overall average runs across all matches in dataset
+        avg_runs_overall = player_averages.loc[player]["Runs"]
+
+        # Filter this player's innings vs the selected opposition
         player_data = df_full[
             (df_full["Player"] == player) & (df_full["Opposition"] == target_opp)
         ]
-        actual_runs = player_data["Runs"].mean() if not player_data.empty else np.nan
 
-        player_avg = player_averages.loc[player].to_dict()
+        if not player_data.empty:
+            # Total and average vs this opposition
+            total_runs_vs_opp = player_data["Runs"].sum()
+            avg_runs_vs_opp = player_data["Runs"].mean()
+        else:
+            total_runs_vs_opp = 0.0
+            avg_runs_vs_opp = np.nan
+
+        # Prepare features for ML (still computed, but not directly used for label)
+        player_avg_row = player_averages.loc[player].to_dict()
         sample_input = {
-            "BF": player_avg.get("BF", 0),
-            "SR": player_avg.get("SR", 0),
-            "X4S": player_avg.get("X4S", 0),
-            "X6S": player_avg.get("X6S", 0),
-            "Mins": player_avg.get("Mins", 0),
+            "BF": player_avg_row.get("BF", 0),
+            "SR": player_avg_row.get("SR", 0),
+            "X4S": player_avg_row.get("X4S", 0),
+            "X6S": player_avg_row.get("X6S", 0),
+            "Mins": player_avg_row.get("Mins", 0),
             "Opposition": [target_opp],
             "Ground": [ground],
             "Player": [player],
         }
 
-        # ML prediction computed but not shown directly (dashboard uses rule-based category)
         X_pred = pd.DataFrame(sample_input)
         X_pred_encoded = pd.get_dummies(
             X_pred, columns=["Opposition", "Ground", "Player"], drop_first=True
@@ -390,27 +403,24 @@ def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground
         X_pred_aligned = X_pred_encoded.reindex(columns=X_cols, fill_value=0)
         _ = best_model.predict(X_pred_aligned)  # prediction not used directly
 
-        # Rule-based category from overall average
-        rule_category = categorize(avg_runs)
-
-        # If we have actual vs this opposition, let that dominate category
-        if not np.isnan(actual_runs):
-            actual_category = categorize(actual_runs)
-            final_category = actual_category
+        # Choose the value to categorize:
+        #  - if avg vs opposition exists, use that
+        #  - else fall back to overall average
+        if not np.isnan(avg_runs_vs_opp):
+            category_runs = avg_runs_vs_opp
         else:
-            final_category = rule_category
+            category_runs = avg_runs_overall
 
-        # For display: if no actual vs this opposition, fall back to overall avg
-        display_actual = actual_runs if not np.isnan(actual_runs) else avg_runs
-
+        final_category = categorize(category_runs)
         tip = generate_player_tip(final_category, target_opp)
 
         player_results.append(
             {
                 "Player": player,
                 "Role": PLAYER_ROLES.get(player, "Unknown"),
-                "Avg Runs": round(avg_runs, 1),
-                f"Actual Runs vs {target_opp}": round(display_actual, 1),
+                "Avg Runs": round(avg_runs_overall, 1),
+                # 👉 TOTAL runs vs that opposition (not avg)
+                f"Actual Runs vs {target_opp}": round(total_runs_vs_opp, 1),
                 "Predicted Category": final_category,
                 "Actionable Tip": tip,
             }
