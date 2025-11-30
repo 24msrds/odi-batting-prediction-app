@@ -1,235 +1,282 @@
+# project_model.py
+
+import warnings
+warnings.filterwarnings("ignore")
+
 import pandas as pd
+import numpy as np
+
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+
 from tabulate import tabulate
+import matplotlib.pyplot as plt
 
-# -------------------------------------------------
-# 1. LOAD FULL RAW DATASET (YOUR BIG CSV)
-# -------------------------------------------------
+# ------------------------------------------------
+# 1. LOAD DATA (LOCAL CSV, NOT /content/)
+# ------------------------------------------------
 
-CSV_FILE = "Combined_Top5_Batsmen.csv"  # must be in same folder
-df_raw = pd.read_csv(CSV_FILE)
+CSV_FILE = "Combined_Top5_Batsmen.csv"   # keep CSV in same folder
+df_full = pd.read_csv(CSV_FILE)
 
-# Expected columns in your original file:
-# ['X', 'Runs', 'Mins', 'BF', 'X4s', 'X6s', 'SR', 'Pos', 'Dismissal', 'Inns',
-#  'Opposition', 'Ground', 'Start.Date', 'Player', 'Country', 'Type',
-#  'Overs', 'Mdns', 'Wkts', 'Econ', 'Source_Sheet']
+def categorize(runs: float) -> str:
+    """Assigns a categorical label based on runs scored."""
+    if runs >= 100:
+        return "Excellent (100+)"
+    elif runs >= 51:
+        return "Good (51-99)"
+    elif runs >= 21:
+        return "Moderate (21-50)"
+    else:
+        return "Low (0-20)"
 
-# -------------------------------------------------
-# 2. BASIC CLEANING
-# -------------------------------------------------
+def train_and_evaluate(model, X_train, X_test, y_train, y_test):
+    """Trains model & returns (trained_model, accuracy)."""
+    model.fit(X_train, y_train)
+    accuracy = accuracy_score(y_test, model.predict(X_test))
+    return model, accuracy
 
-# Convert Runs & SR to numeric
-df_raw["Runs"] = pd.to_numeric(df_raw["Runs"], errors="coerce")
-df_raw["SR"] = pd.to_numeric(df_raw["SR"], errors="coerce")
+# ------------------------------------------------
+# 2. CLEANING & FEATURE ENGINEERING
+# ------------------------------------------------
 
-# Keep only rows with valid runs & strike rate
-df_raw = df_raw.dropna(subset=["Runs", "SR"])
-
-# Keep only batting innings (Type == 'Batting' if present)
-if "Type" in df_raw.columns:
-    df_raw = df_raw[df_raw["Type"].str.contains("Bat", case=False, na=False)]
-
-# -------------------------------------------------
-# 3. ASSIGN REALISTIC ROLES PER PLAYER
-# -------------------------------------------------
-
-role_mapping = {
-    # OPENERS
-    "Rohit Sharma": "Opener",
-    "Shubman Gill": "Opener",
-    "David Warner": "Opener",
-    "Travis Head": "Opener",
-    "Imam-ul-Haq": "Opener",
-    "Jonny Bairstow": "Opener",
-    "Fakhar Zaman": "Opener",
-    "Aaron Finch": "Opener",
-    "Devon Conway": "Opener",
-    "Will Young": "Opener",
-
-    # MIDDLE ORDER
-    "Virat Kohli": "Middle-order",
-    "Babar Azam": "Middle-order",
-    "Joe Root": "Middle-order",
-    "Kane Williamson": "Middle-order",
-    "Daryl Mitchell": "Middle-order",
-    "Rassie van der Dussen": "Middle-order",
-    "David Miller": "Middle-order",
-    "Aiden Markram": "Middle-order",
-    "Steve Smith": "Middle-order",
-
-    # FINISHERS
-    "Jos Buttler": "Finisher",
-    "Glenn Maxwell": "Finisher",
-    "Moeen Ali": "Finisher",
-
-    # KEEPERS
-    "Mohammad Rizwan": "Wicket-Keeper",
-
-    # ALL-ROUNDERS
-    "Ben Stokes": "All-Rounder",
-    "Ravindra Jadeja": "All-Rounder",
-    "Rachin Ravindra": "All-Rounder",
+OPPONENT_MAPPING = {
+    "v South Africa": "SA",
+    "v New Zealand": "NZ",
+    "v Pakistan": "PAK",
+    "v Australia": "AUS",
+    "v India": "IND",
+    "v England": "ENG",
+    "v Sri Lanka": "SL",
+    "v Bangladesh": "BAN",
+    "v Afghanistan": "AFG",
+    "v West Indies": "WI",
+    "v Zimbabwe": "ZIM",
+    "v Scotland": "SCO",
 }
 
-df_raw["Role"] = df_raw["Player"].map(role_mapping)
+# shorten Opposition
+df_full["Opposition"] = df_full["Opposition"].map(OPPONENT_MAPPING).fillna(df_full["Opposition"])
 
-# Remove players without defined role (mainly bowlers)
-df_full = df_raw.dropna(subset=["Role"]).copy()
+# numeric columns
+cols_to_convert = ["Runs", "BF", "X4s", "X6s", "SR", "Mins"]
+for col in cols_to_convert:
+    df_full[col] = pd.to_numeric(df_full[col], errors="coerce")
 
-# -------------------------------------------------
-# 4. CREATE PERFORMANCE CATEGORY (TARGET)
-# -------------------------------------------------
+# consistent names
+df_full.rename(columns={"X4s": "X4S", "X6s": "X6S"}, inplace=True)
 
-def categorize_runs(runs):
-    if runs >= 80:
-        return "Excellent"
-    elif runs >= 50:
-        return "Good"
-    elif runs >= 20:
-        return "Moderate"
-    else:
-        return "Low"
+# target category
+df_full["Performance_Category"] = df_full["Runs"].apply(categorize)
 
-df_full["Performance_Category"] = df_full["Runs"].apply(categorize_runs)
+df_full.dropna(
+    subset=["BF", "SR", "X4S", "X6S", "Player", "Opposition", "Ground", "Performance_Category"],
+    inplace=True,
+)
 
-# -------------------------------------------------
-# 5. FEATURE ENGINEERING (BIGGER & BETTER MODEL)
-# -------------------------------------------------
+FEATURES = ["BF", "SR", "Opposition", "Ground", "Player", "X4S", "X6S", "Mins"]
+TARGET = "Performance_Category"
 
-# Convert boundaries columns safely
-for col in ["BF", "X4s", "X6s"]:
-    if col in df_full.columns:
-        df_full[col] = pd.to_numeric(df_full[col], errors="coerce").fillna(0)
-    else:
-        df_full[col] = 0  # if missing, create as 0
+df_encoded = pd.get_dummies(
+    df_full[FEATURES], columns=["Opposition", "Ground", "Player"], drop_first=True
+)
 
-# Label encode categorical fields
-le_opp = LabelEncoder()
-le_ground = LabelEncoder()
-le_role = LabelEncoder()
-
-df_full["Opp_encoded"] = le_opp.fit_transform(df_full["Opposition"])
-df_full["Ground_encoded"] = le_ground.fit_transform(df_full["Ground"])
-df_full["Role_encoded"] = le_role.fit_transform(df_full["Role"])
-
-# FEATURE SET: using more features (bigger model)
-feature_cols = [
-    "Opp_encoded",
-    "Ground_encoded",
-    "Role_encoded",
-    "BF",       # balls faced
-    "X4s",      # 4s
-    "X6s",      # 6s
-    "SR"        # strike rate
-]
-
-X = df_full[feature_cols]
-y = df_full["Performance_Category"]
-
-# -------------------------------------------------
-# 6. TRAIN / TEST SPLIT + MODEL TRAINING
-# -------------------------------------------------
+le = LabelEncoder()
+y = le.fit_transform(df_full[TARGET])
+X = df_encoded.reindex(columns=df_encoded.columns, fill_value=0)
 
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.25, random_state=42, stratify=y
+    X, y, test_size=0.2, random_state=42, stratify=y
 )
 
-BEST_MODEL = RandomForestClassifier(
-    n_estimators=250,
-    max_depth=None,
-    random_state=42
+# ------------------------------------------------
+# 3. TRAIN MODEL
+# ------------------------------------------------
+
+rf_model = RandomForestClassifier(
+    n_estimators=300,
+    class_weight="balanced",
+    max_depth=15,
+    min_samples_leaf=3,
+    random_state=42,
 )
-BEST_MODEL.fit(X_train, y_train)
 
-MODEL_ACCURACY = BEST_MODEL.score(X_test, y_test)
-DEPLOYMENT_MODEL_NAME = "Random Forest (Batting Performance)"
-UNIQUE_OPPONENTS = sorted(df_full["Opposition"].unique())
-TARGET_GROUND = df_full["Ground"].value_counts().idxmax()
+rf_model_trained, rf_acc = train_and_evaluate(rf_model, X_train, X_test, y_train, y_test)
 
-# Dummy label encoder (not really used by dashboard, but kept for compatibility)
-le = le_opp
+BEST_MODEL = rf_model_trained
+DEPLOYMENT_MODEL_NAME = "Random Forest (Optimized)"
+MODEL_ACCURACY = rf_acc
 
-# -------------------------------------------------
-# 7. ANALYSIS FUNCTION FOR DASHBOARD
-# -------------------------------------------------
+# ------------------------------------------------
+# 4. PLAYER CONTEXT
+# ------------------------------------------------
 
-def analyze_and_rank_players(model, feature_cols_index, le_obj, target_opp, target_ground):
-    """
-    For a given opposition & ground:
-    - Filters matches
-    - Predicts performance category
-    - Aggregates by player
-    - Returns ranked dataframe with tips
-    """
-    subset = df_full[
-        (df_full["Opposition"] == target_opp) &
-        (df_full["Ground"] == target_ground)
-    ]
-    if subset.empty:
-        return pd.DataFrame()
+PLAYER_ROLES = {
+    "Virat Kohli": "Batsman",
+    "Rohit Sharma": "Batsman",
+    "Babar Azam": "Batsman",
+    "Joe Root": "Batsman",
+    "Kane Williamson": "Batsman",
+    "David Miller": "Batsman",
+    "David Warner": "Batsman",
+    "Devon Conway": "Batsman",
+    "Shubman Gill": "Batsman",
+    "Imam-ul-Haq": "Batsman",
+    "Temba Bavuma": "Batsman",
+    "Tom Latham": "Batsman",
+    "Jonny Bairstow": "Batsman",
+    "Steve Smith": "Batsman",
+    "Aaron Finch": "Batsman",
+    "Fakhar Zaman": "Batsman",
+    "Daryl Mitchell": "Batsman",
+    "Jos Buttler": "Wicketkeeper/Batsman",
+    "Quinton de Kock": "Wicketkeeper/Batsman",
+    "Mohammad Rizwan": "Wicketkeeper/Batsman",
+    "Aiden Markram": "All-rounder",
+    "Ben Stokes": "All-rounder",
+    "Ravindra Jadeja": "All-rounder",
+    "Glenn Maxwell": "All-rounder",
+    "Moeen Ali": "All-rounder",
+    "Shadab Khan": "All-rounder",
+    "Jasprit Bumrah": "Bowler",
+    "Pat Cummins": "Bowler",
+    "Tim Southee": "Bowler",
+    "Keshav Maharaj": "Bowler",
+}
 
-    # Prepare features
-    subset_feat = subset.copy()
-    # (feature_cols_index is not used; we use our local feature_cols)
-    X_sub = subset_feat[feature_cols]
+PLAYER_NATIONALITY = {
+    "Virat Kohli": "IND",
+    "Rohit Sharma": "IND",
+    "Ravindra Jadeja": "IND",
+    "Shubman Gill": "IND",
+    "Jasprit Bumrah": "IND",
+    "Babar Azam": "PAK",
+    "Fakhar Zaman": "PAK",
+    "Imam-ul-Haq": "PAK",
+    "Mohammad Rizwan": "PAK",
+    "Shadab Khan": "PAK",
+    "Joe Root": "ENG",
+    "Ben Stokes": "ENG",
+    "Jonny Bairstow": "ENG",
+    "Jos Buttler": "ENG",
+    "Moeen Ali": "ENG",
+    "David Warner": "AUS",
+    "Aaron Finch": "AUS",
+    "Glenn Maxwell": "AUS",
+    "Pat Cummins": "AUS",
+    "Steve Smith": "AUS",
+    "Kane Williamson": "NZ",
+    "Daryl Mitchell": "NZ",
+    "Devon Conway": "NZ",
+    "Tom Latham": "NZ",
+    "Tim Southee": "NZ",
+    "David Miller": "SA",
+    "Aiden Markram": "SA",
+    "Quinton de Kock": "SA",
+    "Temba Bavuma": "SA",
+    "Keshav Maharaj": "SA",
+}
 
-    subset_feat["Predicted Category"] = model.predict(X_sub)
+NUMERIC_FEATURES_FOR_AVG = ["Runs", "BF", "SR", "X4S", "X6S", "Mins"]
+player_averages = df_full.groupby("Player")[NUMERIC_FEATURES_FOR_AVG].mean()
 
-    performance_rank = (
-        subset_feat.groupby(["Player", "Role"])
-        .agg({"Runs": ["mean", "count"], "SR": "mean"})
-        .reset_index()
-    )
-    performance_rank.columns = ["Player", "Role", "Avg Runs", "Innings", "Avg SR"]
-    performance_rank = performance_rank.sort_values("Avg Runs", ascending=False)
+def generate_player_tip(predicted_category: str, opposition: str) -> str:
+    if "Excellent" in predicted_category:
+        return f"🌟 Maintain: Continue aggressive play vs {opposition}."
+    if "Good" in predicted_category:
+        return f"📈 Focus: Convert 50s into 100s vs {opposition}."
+    if "Moderate" in predicted_category:
+        return f"⚠ Improve: Build partnerships vs {opposition}."
+    if "Low" in predicted_category:
+        return f"🚨 Defensive: Avoid early wickets vs {opposition}."
+    return "No specific tip."
 
-    def give_tip(category):
-        if category == "Excellent":
-            return "Maintain aggression, rotate strike smartly, anchor the innings."
-        elif category == "Good":
-            return "Convert 50s into 100s, focus on building long partnerships."
-        elif category == "Moderate":
-            return "Work on shot selection and rotating strike; avoid dot-ball pressure."
-        else:
-            return "Improve temperament; spend more time at the crease before attacking."
+def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground: str) -> pd.DataFrame:
+    """Main function used by app.py to get ranked players for a given opposition & ground."""
+    player_results = []
 
-    merged = pd.merge(
-        performance_rank,
-        subset_feat[["Player", "Predicted Category"]],
-        on="Player",
-        how="left"
-    ).drop_duplicates("Player")
+    for player in player_averages.index.unique():
+        # Skip players whose country == opposition (we don’t want them “against” themselves)
+        if PLAYER_NATIONALITY.get(player, "Unknown") == target_opp:
+            continue
 
-    merged["Actionable Tip"] = merged["Predicted Category"].apply(give_tip)
+        avg_runs = player_averages.loc[player]["Runs"]
+        player_data = df_full[(df_full["Player"] == player) & (df_full["Opposition"] == target_opp)]
+        actual_runs = player_data["Runs"].mean() if not player_data.empty else np.nan
 
-    return merged
+        player_avg = player_averages.loc[player].to_dict()
+        sample_input = {
+            "BF": player_avg.get("BF", 0),
+            "SR": player_avg.get("SR", 0),
+            "X4S": player_avg.get("X4S", 0),
+            "X6S": player_avg.get("X6S", 0),
+            "Mins": player_avg.get("Mins", 0),
+            "Opposition": [target_opp],
+            "Ground": [ground],
+            "Player": [player],
+        }
 
-# -------------------------------------------------
-# 8. HELPER FOR STREAMLIT APP
-# -------------------------------------------------
+        X_pred = pd.DataFrame(sample_input)
+        X_pred_encoded = pd.get_dummies(
+            X_pred, columns=["Opposition", "Ground", "Player"], drop_first=True
+        )
+        X_pred_aligned = X_pred_encoded.reindex(columns=X_cols, fill_value=0)
+
+        pred_class = le_obj.inverse_transform(best_model.predict(X_pred_aligned))[0]
+
+        if not np.isnan(actual_runs):
+            actual_category = categorize(actual_runs)
+            if actual_category != pred_class:
+                pred_class = actual_category
+
+        tip = generate_player_tip(pred_class, target_opp)
+
+        player_results.append(
+            {
+                "Player": player,
+                "Role": PLAYER_ROLES.get(player, "Unknown"),
+                "Avg Runs": round(avg_runs, 1),
+                f"Actual Runs vs {target_opp}": round(actual_runs, 1)
+                if not np.isnan(actual_runs)
+                else "N/A",
+                "Predicted Category": pred_class,
+                "Actionable Tip": tip,
+            }
+        )
+
+    results_df = pd.DataFrame(player_results)
+    if not results_df.empty:
+        results_df = results_df.sort_values(by="Avg Runs", ascending=False).reset_index(drop=True)
+        results_df.index = results_df.index + 1
+        results_df.index.name = "Rank"
+    return results_df
+
+# ------------------------------------------------
+# 5. HELPER FOR STREAMLIT APP
+# ------------------------------------------------
 
 def get_trained_objects():
-    """
-    Returns everything the Streamlit app needs, without printing.
-    """
+    """Return everything app.py needs when it imports this module."""
     return {
-        "model": BEST_MODEL,
-        "feature_columns": feature_cols,
+        "best_model": BEST_MODEL,
+        "x_columns": X.columns,
         "label_encoder": le,
-        "unique_opponents": UNIQUE_OPPONENTS,
-        "target_ground": TARGET_GROUND,
-        "df_full": df_full
+        "df_full": df_full,
+        "player_roles": PLAYER_ROLES,
+        "player_nationality": PLAYER_NATIONALITY,
+        "model_accuracy": MODEL_ACCURACY,
+        "model_name": DEPLOYMENT_MODEL_NAME,
     }
 
-# -------------------------------------------------
-# 9. OPTIONAL: COMMAND-LINE PREVIEW
-# -------------------------------------------------
-
+# Optional: CLI run (won’t run inside Streamlit import)
 if __name__ == "__main__":
-    print(f"\n✅ Training completed using: {DEPLOYMENT_MODEL_NAME}")
-    print(f"🎯 Model Accuracy: {MODEL_ACCURACY:.2%}\n")
-
-    print("Sample cleaned data:")
-    print(tabulate(df_full.head(10), headers="keys", tablefmt="psql"))
+    TARGET_GROUND = df_full["Ground"].mode()[0]
+    for opp in sorted(df_full["Opposition"].unique()):
+        ranked = analyze_and_rank_players(BEST_MODEL, X.columns, le, opp, TARGET_GROUND)
+        print(f"\n=== vs {opp} at {TARGET_GROUND} ===")
+        if ranked.empty:
+            print("No players.")
+        else:
+            print(tabulate(ranked.reset_index(), headers="keys", tablefmt="fancy_grid"))
