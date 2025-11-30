@@ -153,7 +153,7 @@ DEPLOYMENT_MODEL_NAME = "Random Forest (Optimized)"
 MODEL_ACCURACY = rf_acc
 
 # ------------------------------------------------
-# 4. PLAYER CONTEXT
+# 4. PLAYER CONTEXT (BATTING + ROLE META)
 # ------------------------------------------------
 
 PLAYER_ROLES = {
@@ -222,6 +222,83 @@ PLAYER_NATIONALITY = {
     "Keshav Maharaj": "SA",
 }
 
+# ------------------------------------------------
+# 4b. BOWLING CONTRIBUTION (MANUAL PROFILES)
+# ------------------------------------------------
+
+PLAYER_BOWLING_PROFILE = {
+    "Jasprit Bumrah": {
+        "Type": "Pace",
+        "Phase": "Powerplay & Death",
+        "Overs_per_match": 8,
+        "Wickets_per_match": 2.1,
+        "Economy": 4.7,
+    },
+    "Pat Cummins": {
+        "Type": "Pace",
+        "Phase": "Middle & Death",
+        "Overs_per_match": 8,
+        "Wickets_per_match": 1.8,
+        "Economy": 5.1,
+    },
+    "Tim Southee": {
+        "Type": "Pace",
+        "Phase": "Powerplay",
+        "Overs_per_match": 7,
+        "Wickets_per_match": 1.5,
+        "Economy": 5.3,
+    },
+    "Keshav Maharaj": {
+        "Type": "Spin",
+        "Phase": "Middle",
+        "Overs_per_match": 9,
+        "Wickets_per_match": 1.4,
+        "Economy": 4.8,
+    },
+    "Ravindra Jadeja": {
+        "Type": "Spin",
+        "Phase": "Middle",
+        "Overs_per_match": 9,
+        "Wickets_per_match": 1.3,
+        "Economy": 4.9,
+    },
+    "Glenn Maxwell": {
+        "Type": "Spin",
+        "Phase": "Middle",
+        "Overs_per_match": 5,
+        "Wickets_per_match": 0.9,
+        "Economy": 5.6,
+    },
+    "Ben Stokes": {
+        "Type": "Pace",
+        "Phase": "Middle & Death",
+        "Overs_per_match": 6,
+        "Wickets_per_match": 1.1,
+        "Economy": 6.0,
+    },
+    "Shadab Khan": {
+        "Type": "Spin",
+        "Phase": "Middle",
+        "Overs_per_match": 8,
+        "Wickets_per_match": 1.6,
+        "Economy": 5.2,
+    },
+    "Moeen Ali": {
+        "Type": "Spin",
+        "Phase": "Middle",
+        "Overs_per_match": 6,
+        "Wickets_per_match": 0.8,
+        "Economy": 5.8,
+    },
+    "Aiden Markram": {
+        "Type": "Part-time",
+        "Phase": "Middle",
+        "Overs_per_match": 4,
+        "Wickets_per_match": 0.6,
+        "Economy": 5.5,
+    },
+}
+
 NUMERIC_FEATURES_FOR_AVG = ["Runs", "BF", "SR", "X4S", "X6S", "Mins"]
 
 # Average stats per player from the CSV
@@ -250,7 +327,7 @@ if len(player_averages.index.unique()) <= 1 or "Unknown" in player_averages.inde
 
 
 def generate_player_tip(predicted_category: str, opposition: str) -> str:
-    """Return a human-readable, actionable tip based on category."""
+    """Return a human-readable, actionable tip based on batting category."""
     if "Excellent" in predicted_category:
         return (
             f"🌟 Maintain: Back this player to anchor the innings vs {opposition}. "
@@ -344,6 +421,92 @@ def analyze_and_rank_players(best_model, X_cols, le_obj, target_opp: str, ground
         results_df.index = results_df.index + 1
         results_df.index.name = "Rank"
     return results_df
+
+
+# ------------------------------------------------
+# 4c. BOWLING IMPACT HELPERS
+# ------------------------------------------------
+
+def categorize_bowling_impact(impact_score: float) -> str:
+    """Convert numeric impact score into a category label."""
+    if impact_score >= 2.5:
+        return "Strike (High Impact)"
+    elif impact_score >= 1.5:
+        return "Control (Medium Impact)"
+    else:
+        return "Support (Low Impact)"
+
+
+def generate_bowling_tip(category: str, opposition: str) -> str:
+    """Short coaching-style tip for bowling."""
+    if "Strike" in category:
+        return (
+            f"🎯 Strike bowler vs {opposition}: use aggressively in powerplay and death overs. "
+            f"Set attacking fields and look for wickets, even if slightly expensive."
+        )
+    if "Control" in category:
+        return (
+            f"🛡 Control bowler vs {opposition}: bowl mainly in middle overs. "
+            f"Focus on tight lines, build dot-ball pressure and create chances for strike bowlers."
+        )
+    if "Support" in category:
+        return (
+            f"🔁 Support option vs {opposition}: use as a change bowler when main options "
+            f"need a break. Keep fields slightly defensive and avoid bad match-ups."
+        )
+    return "No specific bowling tip."
+
+
+def get_bowling_impact_df(target_opp: str) -> pd.DataFrame:
+    """
+    Returns a ranked bowling impact table for all Bowlers & All-rounders.
+    Uses manual PLAYER_BOWLING_PROFILE values (not from CSV).
+    """
+    rows = []
+
+    for player, role in PLAYER_ROLES.items():
+        if role not in ["Bowler", "All-rounder"]:
+            continue
+
+        # don't select players from the opposition side itself
+        if PLAYER_NATIONALITY.get(player, "Unknown") == target_opp:
+            continue
+
+        profile = PLAYER_BOWLING_PROFILE.get(player)
+        if not profile:
+            continue
+
+        # simple heuristic: more wickets good, lower economy good
+        impact = round(
+            profile["Wickets_per_match"] * 2 - profile["Economy"] * 0.3,
+            2,
+        )
+        category = categorize_bowling_impact(impact)
+        tip = generate_bowling_tip(category, target_opp)
+
+        rows.append(
+            {
+                "Player": player,
+                "Role": role,
+                "Type": profile["Type"],
+                "Phase": profile["Phase"],
+                "Overs / Match": profile["Overs_per_match"],
+                "Wickets / Match": profile["Wickets_per_match"],
+                "Economy": profile["Economy"],
+                "Impact Score": impact,
+                "Impact Category": category,
+                "Bowling Tip": tip,
+            }
+        )
+
+    if not rows:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(rows)
+    df = df.sort_values("Impact Score", ascending=False).reset_index(drop=True)
+    df.index = df.index + 1
+    df.index.name = "Rank"
+    return df
 
 
 # ------------------------------------------------
